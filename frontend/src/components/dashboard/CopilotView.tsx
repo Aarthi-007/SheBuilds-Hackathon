@@ -8,22 +8,24 @@ interface Message {
   id: string;
   role: "user" | "ai";
   content: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
-export function CopilotView() {
+export function CopilotView({ brandId }: { brandId?: string }) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "ai",
-      content: "Hi there! I'm your Klyro Brand Copilot. I have deep semantic access to your brand's voice, guidelines, and historical campaigns. How can I help you synthesize or analyze today?",
-      timestamp: new Date()
+      content: "Hello! I am your Klyros AI Brand Copilot. How can I help optimize your strategy, analyze brand drift, or refine campaign messaging today?",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const targetBrandId = brandId || "latest";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -40,7 +42,7 @@ export function CopilotView() {
       id: Date.now().toString(),
       role: "user",
       content: text,
-      timestamp: new Date()
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages(prev => [...prev, newUserMsg]);
@@ -56,7 +58,7 @@ export function CopilotView() {
           { role: "user", content: text }
         ],
         groq_api_key: groqKey || "",
-        brand_id: "66f4321949182390a845942d"
+        brand_id: targetBrandId
       };
 
       const response = await fetch("http://localhost:8000/api/v1/copilot/chat", {

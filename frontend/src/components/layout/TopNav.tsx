@@ -4,7 +4,17 @@ import { useState, useRef, useEffect } from "react";
 import { Bell, Search, Menu } from "lucide-react";
 import { clsx } from "clsx";
 
-export function TopNav({ onMenuToggle }: { onMenuToggle: () => void }) {
+export function TopNav({ 
+  onMenuToggle,
+  brands = [],
+  activeBrandId = "",
+  onSelectBrand
+}: { 
+  onMenuToggle: () => void;
+  brands?: Array<{ id: string; name: string }>;
+  activeBrandId?: string;
+  onSelectBrand?: (id: string) => void;
+}) {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -36,6 +46,24 @@ export function TopNav({ onMenuToggle }: { onMenuToggle: () => void }) {
             className="bg-transparent border-none outline-none text-sm w-full text-slate-800 placeholder-slate-400"
           />
         </div>
+
+        {/* Brand Selector */}
+        {brands && brands.length > 0 && (
+          <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Brand:</span>
+            <select
+              value={activeBrandId}
+              onChange={(e) => onSelectBrand && onSelectBrand(e.target.value)}
+              className="bg-transparent text-sm font-bold text-slate-800 outline-none cursor-pointer"
+            >
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       
       <div className="flex items-center gap-4">

@@ -37,7 +37,7 @@ interface BrandIdentityData {
   };
 }
 
-export function AssetIngestionView() {
+export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: string; onBrandCreated?: () => void }) {
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -53,16 +53,16 @@ export function AssetIngestionView() {
   const [brandInfo, setBrandInfo] = useState<BrandInfo | null>(null);
   const [brandIdentity, setBrandIdentity] = useState<BrandIdentityData | null>(null);
 
-  const brandId = "66f4321949182390a845942d"; // Mock brand ID (24-char)
+  const targetBrandId = brandId || "latest";
 
   useEffect(() => {
     fetchBrandData();
-  }, []);
+  }, [targetBrandId]);
 
   const fetchBrandData = async () => {
     try {
       // 1. Fetch Brand Info
-      const brandRes = await fetch(`http://localhost:8000/api/v1/brands/${brandId}`, {
+      const brandRes = await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}`, {
         headers: { 'Authorization': 'Bearer mock_token_for_development' }
       });
       if (brandRes.ok) {
@@ -74,7 +74,7 @@ export function AssetIngestionView() {
       }
 
       // 2. Fetch Assets
-      const assetsRes = await fetch(`http://localhost:8000/api/v1/brands/${brandId}/assets`, {
+      const assetsRes = await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}/assets`, {
         headers: { 'Authorization': 'Bearer mock_token_for_development' }
       });
       if (assetsRes.ok) {
@@ -85,7 +85,7 @@ export function AssetIngestionView() {
       }
 
       // 3. Fetch Identity (for purpose/overview)
-      const idRes = await fetch(`http://localhost:8000/api/v1/identity/${brandId}`, {
+      const idRes = await fetch(`http://localhost:8000/api/v1/identity/${targetBrandId}`, {
         headers: { 'Authorization': 'Bearer mock_token_for_development' }
       });
       if (idRes.ok) {
@@ -154,7 +154,7 @@ export function AssetIngestionView() {
     
     // Step 1: Update Brand Category if changed
     try {
-      await fetch(`http://localhost:8000/api/v1/brands/${brandId}`, {
+      await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -174,7 +174,7 @@ export function AssetIngestionView() {
     formData.append("category", "Advertisements"); // Default category for now
     
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/brands/${brandId}/assets`, {
+      const response = await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}/assets`, {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer mock_token_for_development'

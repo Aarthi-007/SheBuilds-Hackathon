@@ -265,7 +265,7 @@ class FeatureRouter:
         qwen_payload: Dict[str, Any]
     ) -> Any:
         if model_name == "qwen":
-            return cls._extract_qwen_feature(feature_name, qwen_payload)
+            return cls._normalize_value(cls._extract_qwen_feature(feature_name, qwen_payload))
         if model_name == "whisper":
             return cls._extract_whisper_feature(feature_name, raw_data)
         if model_name == "ocr":
@@ -275,6 +275,15 @@ class FeatureRouter:
         if model_name == "sentence_transformer":
             return cls._extract_embedding_feature(feature_name, raw_data, qwen_payload)
         return None
+
+    @classmethod
+    def _normalize_value(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            if "value" in value:
+                return value["value"]
+            if "text" in value:
+                return value["text"]
+        return value
 
     @classmethod
     def _extract_qwen_feature(cls, feature_name: str, qwen_payload: Dict[str, Any]) -> Any:
@@ -291,6 +300,10 @@ class FeatureRouter:
             "marketing_strategy": ["marketing_strategy", "strategy"],
             "value_proposition": ["value_proposition", "positioning"],
             "cta": ["cta", "call_to_action"],
+            "headline": ["headline", "heading"],
+            "body_text": ["body_text", "body_copy", "description"],
+            "tagline": ["tagline", "slogan"],
+            "keywords": ["keywords", "key_terms", "brand_keywords"],
             "visual_style": ["visual_style", "visual_identity"],
             "layout": ["layout", "composition"],
             "branding_elements": ["branding_elements", "brand_elements"],
@@ -330,9 +343,9 @@ class FeatureRouter:
         if feature_name == "tagline":
             return cls._select_tagline_from_text(ocr_text)
         if feature_name == "keywords":
-            return None
+            return cls._extract_keywords_from_text(ocr_text)
         if feature_name == "cta":
-            return None
+            return cls._extract_cta_from_text(ocr_text)
         return None
 
     @classmethod
@@ -340,6 +353,24 @@ class FeatureRouter:
         if feature_name != "pdf_text":
             return None
         return raw_data.get("pdf_text")
+
+    @classmethod
+    def _extract_keywords_from_text(cls, text: str) -> List[str]:
+        words = [word.strip(".,!?:;\"'()[]") for word in text.split() if len(word) > 4]
+        common = []
+        for word in words:
+            if word.lower() not in {"brand", "image", "product", "quality", "brand", "design", "logo"}:
+                common.append(word)
+        return list(dict.fromkeys(common[:10]))
+
+    @classmethod
+    def _extract_cta_from_text(cls, text: str) -> Optional[str]:
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        for line in lines:
+            lowered = line.lower()
+            if any(phrase in lowered for phrase in ["buy now", "shop now", "learn more", "get started", "start today", "sign up"]):
+                return line
+        return lines[-1] if lines else None
 
     @classmethod
     def _extract_embedding_feature(

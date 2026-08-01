@@ -19,7 +19,7 @@ interface ValidationReport {
   recommendations: string[];
 }
 
-export function ValidationView() {
+export function ValidationView({ brandId }: { brandId?: string }) {
   const [textContent, setTextContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [platform, setPlatform] = useState("Instagram");
@@ -29,7 +29,7 @@ export function ValidationView() {
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [error, setError] = useState("");
 
-  const brandId = "66f4321949182390a845942d"; // Mock brand ID (24-char)
+  const targetBrandId = brandId || "latest";
 
   const runValidation = async () => {
     if (!textContent.trim()) {
@@ -48,7 +48,7 @@ export function ValidationView() {
           "Authorization": "Bearer mock_token_for_development"
         },
         body: JSON.stringify({
-          brand_id: brandId,
+          brand_id: targetBrandId,
           text_content: textContent,
           image_url: imageUrl || undefined,
           platform,

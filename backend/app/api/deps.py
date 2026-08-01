@@ -8,18 +8,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     if token == "mock_token_for_development" or not token:
-        user = await User.find_one({"email": "rahul@amul.com"})
-        if not user:
-            user = await User.find_one()
+        user = await User.find_all().sort("-created_at").first_or_none()
         if user:
             return user
 
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
-        # Fallback to seeded user for seamless frontend testing
-        user = await User.find_one({"email": "rahul@amul.com"})
-        if not user:
-            user = await User.find_one()
+        # Fallback for seamless frontend testing
+        user = await User.find_all().sort("-created_at").first_or_none()
         if user:
             return user
         raise HTTPException(

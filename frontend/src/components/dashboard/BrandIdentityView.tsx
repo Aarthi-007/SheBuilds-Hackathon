@@ -16,13 +16,13 @@ interface BrandIdentityData {
   confidence_score?: number;
 }
 
-export function BrandIdentityView() {
+export function BrandIdentityView({ brandId }: { brandId?: string }) {
   const [identity, setIdentity] = useState<BrandIdentityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRebuilding, setIsRebuilding] = useState(false);
   const [error, setError] = useState("");
 
-  const brandId = "66f4321949182390a845942d";
+  const targetBrandId = brandId || "latest";
 
   // Safely convert Dict, string, or array field to a displayable string
   const safeText = (field: Record<string, unknown> | string | string[] | undefined): string => {
@@ -43,13 +43,13 @@ export function BrandIdentityView() {
 
   useEffect(() => {
     fetchIdentity();
-  }, []);
+  }, [targetBrandId]);
 
   const fetchIdentity = async () => {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/identity/${brandId}`, {
+      const response = await fetch(`http://localhost:8000/api/v1/identity/${targetBrandId}`, {
         headers: { 'Authorization': 'Bearer mock_token_for_development' }
       });
       if (response.ok) {
@@ -74,7 +74,7 @@ export function BrandIdentityView() {
     setIsRebuilding(true);
     setError("");
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/identity/build/${brandId}?force_rebuild=true`, {
+      const response = await fetch(`http://localhost:8000/api/v1/identity/build/${targetBrandId}?force_rebuild=true`, {
         method: "POST",
         headers: { 'Authorization': 'Bearer mock_token_for_development' }
       });

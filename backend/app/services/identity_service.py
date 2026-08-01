@@ -264,7 +264,10 @@ class IdentityService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found")
 
         identity = await BrandIdentity.find_one({"brand_id": brand_id})
+        assets = await BrandAsset.find({"brand_id": brand_id}).to_list()
         if not identity:
             identity, _ = await IdentityService.build_identity(brand_id, org_id)
+        elif len(assets) != identity.assets_processed_count or identity.status != "ready":
+            identity, _ = await IdentityService.build_identity(brand_id, org_id, force_rebuild=True)
 
         return identity

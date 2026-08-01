@@ -17,16 +17,16 @@ interface TrendReportDTO {
   hashtags: string[];
 }
 
-export function TrendAnalyticsView() {
+export function TrendAnalyticsView({ brandId }: { brandId?: string }) {
   const [trends, setTrends] = useState<TrendReportDTO[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const brandId = "66f4321949182390a845942d"; // Mock brand ID (24-char)
+  const targetBrandId = brandId || "latest";
 
   useEffect(() => {
     // Optionally fetch existing trends on mount, or wait for user to hit Discover
-  }, []);
+  }, [targetBrandId]);
 
   const discoverTrends = async () => {
     setIsLoading(true);
@@ -39,7 +39,7 @@ export function TrendAnalyticsView() {
           "Authorization": "Bearer mock_token_for_development"
         },
         body: JSON.stringify({
-          brand_id: brandId,
+          brand_id: targetBrandId,
           category: null
         }),
       });

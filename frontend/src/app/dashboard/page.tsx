@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNav } from "@/components/layout/TopNav";
 import { OverviewView } from "@/components/dashboard/OverviewView";
@@ -15,27 +15,62 @@ import { CopilotView } from "@/components/dashboard/CopilotView";
 export default function DashboardClient() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [brands, setBrands] = useState<Array<{ id: string; name: string }>>([]);
+  const [activeBrandId, setActiveBrandId] = useState<string>("");
+
+  useEffect(() => {
+    fetchBrands();
+  }, []);
+
+  const fetchBrands = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/brands", {
+        headers: { Authorization: "Bearer mock_token_for_development" }
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setBrands(result.data);
+          const savedId = localStorage.getItem("active_brand_id");
+          if (savedId && result.data.some((b: any) => b.id === savedId)) {
+            setActiveBrandId(savedId);
+          } else {
+            const latestId = result.data[result.data.length - 1].id;
+            setActiveBrandId(latestId);
+            localStorage.setItem("active_brand_id", latestId);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch brands", e);
+    }
+  };
+
+  const handleSelectBrand = (id: string) => {
+    setActiveBrandId(id);
+    localStorage.setItem("active_brand_id", id);
+  };
 
   const renderView = () => {
     switch (activeTab) {
       case "dashboard":
-        return <OverviewView setActiveTab={setActiveTab} />;
+        return <OverviewView setActiveTab={setActiveTab} brandId={activeBrandId} />;
       case "assets":
-        return <AssetIngestionView />;
+        return <AssetIngestionView brandId={activeBrandId} onBrandCreated={fetchBrands} />;
       case "identity":
-        return <BrandIdentityView />;
+        return <BrandIdentityView brandId={activeBrandId} />;
       case "validation":
-        return <ValidationView />;
+        return <ValidationView brandId={activeBrandId} />;
       case "trends":
-        return <TrendAnalyticsView />;
+        return <TrendAnalyticsView brandId={activeBrandId} />;
       case "simulation":
-        return <ImpactSimulationView />;
+        return <ImpactSimulationView brandId={activeBrandId} />;
       case "copilot":
-        return <CopilotView />;
+        return <CopilotView brandId={activeBrandId} />;
       case "settings":
         return <SettingsView />;
       default:
-        return <OverviewView setActiveTab={setActiveTab} />;
+        return <OverviewView setActiveTab={setActiveTab} brandId={activeBrandId} />;
     }
   };
 
@@ -48,7 +83,12 @@ export default function DashboardClient() {
         setIsOpen={setIsMobileMenuOpen} 
       />
       <div className="flex-1 flex flex-col min-w-0">
-        <TopNav onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+        <TopNav 
+          onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+          brands={brands}
+          activeBrandId={activeBrandId}
+          onSelectBrand={handleSelectBrand}
+        />
         <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
           <div className="mx-auto max-w-7xl">
             {renderView()}

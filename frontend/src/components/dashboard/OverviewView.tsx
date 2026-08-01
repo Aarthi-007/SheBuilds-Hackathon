@@ -23,7 +23,6 @@ import {
   ResponsiveContainer 
 } from "recharts";
 
-const BRAND_ID = "66f4321949182390a845942d";
 const AUTH = { Authorization: "Bearer mock_token_for_development" };
 
 function getFileIcon(type: string) {
@@ -32,23 +31,25 @@ function getFileIcon(type: string) {
   return <FileText className="w-5 h-5 text-amber-500" />;
 }
 
-export function OverviewView({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+export function OverviewView({ setActiveTab, brandId }: { setActiveTab: (tab: string) => void; brandId?: string }) {
   const [dashboard, setDashboard] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
   const [brandName, setBrandName] = useState("Klyros");
   const [isLoading, setIsLoading] = useState(true);
 
+  const targetBrandId = brandId || "latest";
+
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [targetBrandId]);
 
   const fetchDashboard = async () => {
     setIsLoading(true);
     try {
       const [dashRes, brandRes, assetsRes] = await Promise.all([
         fetch("http://localhost:8000/api/v1/dashboard", { headers: AUTH }),
-        fetch(`http://localhost:8000/api/v1/brands/${BRAND_ID}`, { headers: AUTH }),
-        fetch(`http://localhost:8000/api/v1/brands/${BRAND_ID}/assets`, { headers: AUTH }),
+        fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}`, { headers: AUTH }),
+        fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}/assets`, { headers: AUTH }),
       ]);
 
       if (dashRes.ok) {

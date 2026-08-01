@@ -13,8 +13,8 @@ interface OptimizationReport {
   overall_improvement: number;
 }
 
-export function ImpactSimulationView() {
-  const [textContent, setTextContent] = useState("");
+export function ImpactSimulationView({ brandId }: { brandId?: string }) {
+  const [textContent, setTextContent] = useState("Discover authentic quality crafted for every moment together.");
   const [targetTone, setTargetTone] = useState("Gen-Z friendly & Edgy");
   const [platform, setPlatform] = useState("Instagram");
   
@@ -23,7 +23,7 @@ export function ImpactSimulationView() {
   const [optimizedText, setOptimizedText] = useState("");
   const [error, setError] = useState("");
 
-  const brandId = "66f4321949182390a845942d"; // Mock brand ID (24-char)
+  const targetBrandId = brandId || "latest";
 
   const runSimulation = async () => {
     if (!textContent.trim()) {
@@ -45,7 +45,7 @@ export function ImpactSimulationView() {
           "Authorization": "Bearer mock_token_for_development"
         },
         body: JSON.stringify({
-          brand_id: brandId,
+          brand_id: targetBrandId,
           title: "Simulation Temp Campaign",
           description: "Temporary campaign for impact simulation",
           platform: platform,
