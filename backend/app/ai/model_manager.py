@@ -174,16 +174,25 @@ class AIModelManager:
     def get_model(self, name: str) -> Any:
         """
         Dynamically returns the requested AI model instance or metadata structure.
-        Supports: "qwen", "whisper", "ocr", "embedding", "pymupdf"
+        Supports: "qwen", "whisper", "ocr", "embedding", "pymupdf", "sentence_transformer"
         """
         if not self._initialized:
             self.initialize_models()
-        return self._models.get(name.lower())
+
+        key = name.lower()
+        if key == "sentence_transformer":
+            key = "embedding"
+        if key == "bge_m3":
+            key = "embedding"
+
+        return self._models.get(key)
 
     def get_status(self) -> Dict[str, Any]:
         if not self._initialized:
             self.initialize_models()
-        return self._status.copy()
+        status_copy = self._status.copy()
+        status_copy["sentence_transformer"] = status_copy.get("bge_m3", False)
+        return status_copy
 
     async def process_smart_pdf_async(self, file_path: str) -> Dict[str, Any]:
         """

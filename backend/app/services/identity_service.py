@@ -123,6 +123,7 @@ class IdentityService:
         return identity, job
 
     @classmethod
+    @classmethod
     def _synthesize_from_feature_store(
         cls,
         brand_name: str,
@@ -135,73 +136,124 @@ class IdentityService:
         """
         if not feature_records:
             return {
-                "voice": {"tone": "Warm, Friendly & Authentic", "style": "Conversational", "confidence": 0.95, "reading_level": "Accessible", "cta_style": "Action-Oriented"},
-                "visual": {"primary_colors": ["#0055A4", "#FFFFFF"], "secondary_colors": ["#1E293B", "#64748B"], "logo_position": "Top Left", "layout": "Clean Minimalist", "typography": "Sans-Serif"},
-                "emotion": {"trust": 96.0, "family": 94.0, "innovation": 88.0, "joy": 92.0},
-                "audience": {"primary": "Young Families", "secondary": "Quality Consumers", "age_group": "22-45"},
-                "keywords": ["Trusted", "Quality", "Fresh"],
-                "personality": ["Warm", "Dependable"],
-                "design_rules": ["Maintain color contrast"],
-                "brand_summary": f"{brand_name} Brand Identity Model",
-                "confidence_score": 0.95
+                "voice": {"tone": None, "style": None, "confidence": 0.0},
+                "visual": {"primary_colors": [], "secondary_colors": [], "logo_position": None, "layout": None, "typography": None},
+                "emotion": {},
+                "audience": {},
+                "keywords": [],
+                "personality": [],
+                "design_rules": [],
+                "brand_summary": f"No features extracted yet for {brand_name}.",
+                "confidence_score": 0.0
             }
 
-        # Cluster by feature_name
         voice_votes = Counter()
+        tone_votes = Counter()
         color_votes = Counter()
         layout_votes = Counter()
+        logo_pos_votes = Counter()
+        style_votes = Counter()
+        emotion_votes = Counter()
+        personality_votes = Counter()
+        keyword_votes = Counter()
+        audience_votes = Counter()
+
         total_confidence = 0.0
 
         for r in feature_records:
             total_confidence += r.confidence
-            if r.feature_name == "brand_voice" and isinstance(r.value, str):
-                voice_votes[r.value] += r.confidence
-            elif r.feature_name == "color_system" and isinstance(r.value, list):
-                for col in r.value:
-                    color_votes[col] += r.confidence
-            elif r.feature_name == "visual_identity" and isinstance(r.value, str):
-                layout_votes[r.value] += r.confidence
+            val = r.value
+            if not val:
+                continue
 
-        top_voice = voice_votes.most_common(1)[0][0] if voice_votes else "Warm, Friendly & Authentic"
-        top_colors = [c[0] for c in color_votes.most_common(3)] if color_votes else ["#0055A4", "#FFFFFF", "#FFD100"]
-        top_layout = layout_votes.most_common(1)[0][0] if layout_votes else "Clean Minimalist with Dynamic Whitespace"
+            fname = r.feature_name
+            if fname in ["brand_voice", "voice"] and isinstance(val, str):
+                voice_votes[val] += r.confidence
+            elif fname == "tone" and isinstance(val, str):
+                tone_votes[val] += r.confidence
+            elif fname in ["color_palette", "dominant_colors", "color_system"]:
+                if isinstance(val, list):
+                    for c in val:
+                        color_votes[str(c)] += r.confidence
+                elif isinstance(val, str):
+                    color_votes[val] += r.confidence
+            elif fname in ["layout", "visual_identity"] and isinstance(val, str):
+                layout_votes[val] += r.confidence
+            elif fname == "logo_position" and isinstance(val, str):
+                logo_pos_votes[val] += r.confidence
+            elif fname == "visual_style" and isinstance(val, str):
+                style_votes[val] += r.confidence
+            elif fname == "emotion":
+                if isinstance(val, dict):
+                    for k, v in val.items():
+                        if isinstance(v, (int, float)):
+                            emotion_votes[k] += v * (r.confidence / 100.0)
+                elif isinstance(val, str):
+                    emotion_votes[val] += r.confidence
+            elif fname in ["brand_personality", "personality"]:
+                if isinstance(val, list):
+                    for p in val:
+                        personality_votes[str(p)] += r.confidence
+                elif isinstance(val, str):
+                    personality_votes[str(p)] += r.confidence
+            elif fname in ["keywords", "tagline", "headline"]:
+                if isinstance(val, list):
+                    for k in val:
+                        keyword_votes[str(k)] += r.confidence
+                elif isinstance(val, str):
+                    keyword_votes[str(k)] += r.confidence
+            elif fname == "audience":
+                if isinstance(val, str):
+                    audience_votes[val] += r.confidence
+                elif isinstance(val, dict):
+                    for k, v in val.items():
+                        if isinstance(v, str):
+                            audience_votes[f"{k}: {v}"] += r.confidence
 
-        avg_confidence = round((total_confidence / len(feature_records)) / 100.0, 2) if feature_records else 0.95
+        top_voice = voice_votes.most_common(1)[0][0] if voice_votes else None
+        top_tone = tone_votes.most_common(1)[0][0] if tone_votes else None
+        top_colors = [c[0] for c in color_votes.most_common(5)] if color_votes else []
+        top_layout = layout_votes.most_common(1)[0][0] if layout_votes else None
+        top_logo_pos = logo_pos_votes.most_common(1)[0][0] if logo_pos_votes else None
+        top_style = style_votes.most_common(1)[0][0] if style_votes else None
+        top_keywords = [k[0] for k in keyword_votes.most_common(5)] if keyword_votes else []
+        top_personality = [p[0] for p in personality_votes.most_common(5)] if personality_votes else []
+        top_audience = audience_votes.most_common(1)[0][0] if audience_votes else None
+
+        avg_confidence = round((total_confidence / len(feature_records)) / 100.0, 2) if feature_records else 0.0
+
+        emotions_dict = {}
+        if emotion_votes:
+            for k, v in emotion_votes.most_common(4):
+                emotions_dict[k] = round(min(100.0, float(v)), 1)
+
+        design_rules = []
+        if top_colors:
+            design_rules.append(f"Maintain primary brand color ({top_colors[0]}).")
+        if top_logo_pos:
+            design_rules.append(f"Position logo at {top_logo_pos}.")
+        if top_style:
+            design_rules.append(f"Adhere to visual style: {top_style}.")
 
         return {
             "voice": {
-                "tone": top_voice,
-                "style": "Conversational yet Professional",
+                "tone": top_tone or top_voice,
+                "style": top_voice or top_style,
                 "confidence": avg_confidence,
-                "reading_level": "Accessible",
-                "cta_style": "Action-Oriented"
             },
             "visual": {
-                "primary_colors": top_colors,
-                "secondary_colors": ["#1E293B", "#64748B"],
-                "logo_position": "Top Left",
+                "primary_colors": top_colors[:2],
+                "secondary_colors": top_colors[2:],
+                "logo_position": top_logo_pos,
                 "layout": top_layout,
-                "typography": "Sans-Serif (Inter / Roboto Bold)"
+                "typography": top_style
             },
-            "emotion": {
-                "trust": 96.0,
-                "family": 94.0,
-                "innovation": 88.0,
-                "joy": 92.0
-            },
-            "audience": {
-                "primary": "Young Families & Professionals",
-                "secondary": "Quality Consumers",
-                "age_group": "22-45"
-            },
-            "keywords": ["Trusted", "Fresh", "Together", "Quality", "Pure"],
-            "personality": ["Warm", "Dependable", "Community-Focused"],
-            "design_rules": [
-                f"Always maintain prominent primary brand color ({top_colors[0] if top_colors else '#0055A4'}).",
-                "Ensure logo is legible with minimum 20px padding.",
-                "Use encouraging, inclusive tone in body text."
-            ],
-            "brand_summary": f"{brand_name} represents a trusted modern brand synthesized from {len(feature_records)} FeatureStore evidence records across {asset_count} assets.",
+            "emotion": emotions_dict,
+            "audience": {"primary": top_audience} if top_audience else {},
+            "keywords": top_keywords,
+            "personality": top_personality,
+            "design_rules": design_rules,
+            "brand_summary": f"{brand_name} Living Brand Identity synthesized from {len(feature_records)} FeatureStore evidence records across {asset_count} assets.",
             "confidence_score": avg_confidence
         }
 

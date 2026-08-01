@@ -68,8 +68,11 @@ class FeatureStoreService:
                     feature_name=feat.get("feature_name", "general_feature"),
                     value=feat.get("value", ""),
                     confidence=float(feat.get("confidence", 95.0)),
-                    source_model=feat.get("source_model", "ai_pipeline"),
-                    evidence=feat.get("evidence", "")
+                    model=feat.get("model", feat.get("source_model", "qwen")),
+                    source_model=feat.get("source_model", feat.get("model", "qwen")),
+                    source=feat.get("source", asset_type),
+                    evidence=feat.get("evidence", ""),
+                    processing_time=float(feat.get("processing_time_ms", feat.get("processing_time", 0.0)))
                 )
                 await record.insert()
                 stored_records.append(record)

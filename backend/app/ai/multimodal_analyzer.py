@@ -1,8 +1,7 @@
 import os
 import logging
 from typing import List, Dict, Any, Optional
-from app.ai.groq_analyzer import GroqBrandAnalyzer
-from app.ai.model_manager import model_manager
+from app.ai.feature_router import FeatureRouter
 from app.services.feature_service import FeatureStoreService
 from app.config import settings
 
@@ -16,12 +15,7 @@ class MultimodalAnalyzer:
     Workflows:
     - Calculates SHA-256 asset hash before inference.
     - Checks AI Cache in FeatureStore. Returns cached features if hit.
-    - Otherwise runs specialized feature extraction per asset type:
-        1. Image -> Qwen2.5-VL -> Visual Features
-        2. Audio -> Whisper Tiny -> Transcript & Voice Features
-        3. Video -> Key Frames (every 5s) + Audio -> Visual & Audio Features
-        4. PDF -> Smart PDF (PyMuPDF text -> Fallback PaddleOCR) -> Document Features
-        5. Website -> Web Extractor -> Web Features
+    - Otherwise routes every feature request through FeatureRouter.
     - Writes all extracted features into `feature_store` MongoDB collection.
     """
 
@@ -56,62 +50,10 @@ class MultimodalAnalyzer:
                 for r in cached_records
             ]
 
-        # Step 3: Run specialized Feature Extraction
-        features_to_store: List[Dict[str, Any]] = []
+        # Step 3: Route feature extraction through FeatureRouter
+        features_to_store = await FeatureRouter.extract_features_for_asset(asset, api_key=key)
 
-        if asset_type == "image":
-            # Image Pipeline: Qwen2.5-VL / Vision AI
-            if key and os.path.exists(storage_path):
-                intel = GroqBrandAnalyzer.analyze_asset(storage_path, asset.get("mime_type", "image/jpeg"), api_key=key)
-                if intel:
-                    features_to_store.extend([
-                        {"feature_name": "brand_voice", "value": intel.get("brand_voice", {}).get("value", "Authentic"), "confidence": intel.get("brand_voice", {}).get("confidence", 95), "source_model": "qwen2.5-vl", "evidence": "Visual mood & image text"},
-                        {"feature_name": "color_system", "value": intel.get("color_system", {}).get("value", ["#0055A4", "#FFFFFF"]), "confidence": intel.get("color_system", {}).get("confidence", 96), "source_model": "qwen2.5-vl", "evidence": "Primary image colors"},
-                        {"feature_name": "visual_identity", "value": intel.get("visual_identity", {}).get("value", "Clean Minimalist"), "confidence": 94, "source_model": "qwen2.5-vl", "evidence": "Image composition"}
-                    ])
-
-            if not features_to_store:
-                features_to_store.extend([
-                    {"feature_name": "brand_voice", "value": "Warm, Friendly & Authentic", "confidence": 95, "source_model": "qwen2.5-vl", "evidence": f"Image asset '{asset.get('filename')}' composition"},
-                    {"feature_name": "color_system", "value": ["#0055A4", "#FFFFFF", "#FFD100"], "confidence": 96, "source_model": "qwen2.5-vl", "evidence": "Detected visual palette"},
-                    {"feature_name": "visual_identity", "value": "Clean Minimalist with Prominent Logo", "confidence": 94, "source_model": "qwen2.5-vl", "evidence": "Top-Left logo alignment"}
-                ])
-
-        elif asset_type == "audio":
-            # Audio Pipeline: Whisper Tiny
-            audio_res = await model_manager.transcribe_audio_async(storage_path)
-            features_to_store.extend([
-                {"feature_name": "audio_transcript", "value": audio_res.get("text", ""), "confidence": 92, "source_model": audio_res.get("provider", "whisper-tiny"), "evidence": "Audio stream transcription"},
-                {"feature_name": "brand_voice", "value": "Conversational, Encouraging & Clear", "confidence": 95, "source_model": "whisper-tiny", "evidence": "Audio tone analysis"}
-            ])
-
-        elif asset_type == "video":
-            # Video Pipeline: Key Frames (every 5s) -> Qwen2.5-VL + Audio -> Whisper Tiny
-            video_res = await model_manager.process_video_async(storage_path)
-            features_to_store.extend([
-                {"feature_name": "video_keyframes", "value": video_res.get("key_frames", []), "confidence": 94, "source_model": "qwen2.5-vl", "evidence": "Keyframe analysis every 5 seconds"},
-                {"feature_name": "audio_transcript", "value": video_res.get("transcript", ""), "confidence": 93, "source_model": "whisper-tiny", "evidence": "Video audio track transcription"},
-                {"feature_name": "brand_voice", "value": "Dynamic, Inspiring & Authentic", "confidence": 96, "source_model": "qwen2.5-vl+whisper", "evidence": "Multi-track video perception"}
-            ])
-
-        elif asset_type == "pdf":
-            # Smart PDF Pipeline: PyMuPDF -> Text. If missing -> PaddleOCR -> Qwen
-            pdf_res = await model_manager.process_smart_pdf_async(storage_path)
-            features_to_store.extend([
-                {"feature_name": "pdf_text", "value": pdf_res.get("text", "")[:1000], "confidence": 96, "source_model": pdf_res.get("method", "pymupdf"), "evidence": f"Smart PDF extraction ({pdf_res.get('method')})"},
-                {"feature_name": "brand_voice", "value": "Professional & Authoritative", "confidence": 95, "source_model": "qwen2.5", "evidence": "Document guidelines tone"},
-                {"feature_name": "design_principles", "value": ["Maintain brand blue accent #0055A4", "Ensure 20px logo margin"], "confidence": 98, "source_model": "qwen2.5", "evidence": "Brand guidelines specification"}
-            ])
-
-        elif asset_type in ["website", "text"]:
-            # Website Pipeline
-            web_text = asset.get("metadata", {}).get("extracted_text", asset.get("filename", ""))
-            features_to_store.extend([
-                {"feature_name": "website_content", "value": web_text[:1000], "confidence": 95, "source_model": "web_scraper", "evidence": "Website landing page content"},
-                {"feature_name": "brand_voice", "value": "Modern, Customer-Centric & Accessible", "confidence": 94, "source_model": "qwen2.5", "evidence": "Website CTA and headline copy"}
-            ])
-
-        # Step 4: Write features into Feature Store
+        # Step 4: Persist extracted features into Feature Store
         await FeatureStoreService.store_features_async(
             brand_id=brand_id,
             asset_id=asset_id,
