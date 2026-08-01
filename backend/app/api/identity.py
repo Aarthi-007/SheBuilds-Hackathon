@@ -1,12 +1,28 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Header, Query
 from app.schemas.auth import StandardResponse
-from app.schemas.identity import BuildIdentityRequest, BrandIdentityDTO
+from app.schemas.identity import BuildIdentityRequest, BrandIdentityDTO, TranscriptAnalysisRequest
 from app.services.identity_service import IdentityService
 from app.api.deps import get_current_user
 from app.models.user import User
+from app.ai.groq_analyzer import GroqBrandAnalyzer
 
 router = APIRouter(prefix="/identity", tags=["Module 3 - Brand Identity Intelligence Engine"])
+
+@router.post("/analyze-transcript", response_model=StandardResponse)
+async def analyze_transcript(
+    req: TranscriptAnalysisRequest,
+    groq_api_key: Optional[str] = Query(None, description="Optional API key to analyze transcript content with the Qwen-backed audio intelligence engine"),
+    x_groq_api_key: Optional[str] = Header(None, alias="X-Groq-Api-Key"),
+    current_user: User = Depends(get_current_user)
+):
+    key = groq_api_key or x_groq_api_key
+    analysis = GroqBrandAnalyzer.analyze_transcript(req.transcript_text, api_key=key)
+    return StandardResponse(
+        success=True,
+        message="Transcript Brand Intelligence analyzed successfully",
+        data=analysis
+    )
 
 @router.post("/build/{brand_id}", response_model=StandardResponse)
 async def build_identity(

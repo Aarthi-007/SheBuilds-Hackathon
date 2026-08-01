@@ -37,6 +37,10 @@ async def seed_data():
         )
         await user.insert()
         print("  [Seeded] User: rahul@amul.com (Password: Password@123)")
+    else:
+        user.password_hash = get_password_hash("Password@123")
+        await user.save()
+        print("  [Refreshed] User: rahul@amul.com (Password: Password@123)")
 
     # Seed Brand
     brand = await Brand.find_one({"name": "Amul"})

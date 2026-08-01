@@ -12,10 +12,11 @@ logger = logging.getLogger("uvicorn")
 setattr(AsyncIOMotorClient, "append_metadata", lambda self, *args, **kwargs: None)
 setattr(AsyncIOMotorDatabase, "append_metadata", lambda self, *args, **kwargs: None)
 
-# Patch mongomock authorizedCollections parameter compatibility
+# Patch mongomock Beanie 2.x parameter compatibility
 orig_list_col_names = mongomock.database.Database.list_collection_names
 def patched_list_col_names(self, session=None, filter=None, **kwargs):
     kwargs.pop("authorizedCollections", None)
+    kwargs.pop("nameOnly", None)
     return orig_list_col_names(self, session=session, filter=filter, **kwargs)
 mongomock.database.Database.list_collection_names = patched_list_col_names
 

@@ -6,6 +6,9 @@ class BuildIdentityRequest(BaseModel):
     force_rebuild: bool = False
     groq_api_key: Optional[str] = None
 
+class TranscriptAnalysisRequest(BaseModel):
+    transcript_text: str
+
 class BrandIdentityDTO(BaseModel):
     id: str
     brand_id: str

@@ -1,17 +1,30 @@
 import os
+import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+
 from app.config import settings
 from app.database import init_db
 from app.api.router import api_router
+from app.ai.model_manager import model_manager
+
+logger = logging.getLogger("uvicorn")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup DB connection
+    logger.info("Initializing Klyros Backend & MongoDB connection...")
     await init_db()
+    
+    logger.info("Initializing Multimodal AI Model Manager...")
+    model_manager.initialize_models()
+    
     yield
+    logger.info("Klyros Backend shutting down...")
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -22,7 +35,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Set up CORS
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,17 +44,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve uploaded static files from storage directory
+# Exception Handlers
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error("Unhandled Exception on %s: %s", request.url.path, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": "An internal server error occurred.",
+            "detail": str(exc)
+        }
+    )
+
+# Static file storage mount
 os.makedirs(settings.STORAGE_DIR, exist_ok=True)
 app.mount("/storage", StaticFiles(directory=settings.STORAGE_DIR), name="storage")
 
-# Optional mount for Mock Frontend Test Bench (Easily deletable)
-mock_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "mock_frontend")
-if os.path.exists(mock_dir):
-    app.mount("/mock", StaticFiles(directory=mock_dir, html=True), name="mock_frontend")
-
 # Register API v1 routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
 
 @app.get("/", tags=["Health Check"])
 async def root():
@@ -49,9 +71,14 @@ async def root():
         "status": "online",
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "docs": f"{settings.BASE_URL}/docs",
-        "mock_frontend": f"{settings.BASE_URL}/mock/"
+        "docs": f"{settings.BASE_URL}/docs"
     }
+
+
+@app.get("/health", tags=["Health Check"])
+async def health():
+    return {"status": "ok", "service": settings.PROJECT_NAME}
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,9 +1,11 @@
 import os
+import io
 import base64
 import json
 import requests
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
+from PIL import Image
 from app.config import settings
 
 logger = logging.getLogger("uvicorn")
@@ -189,6 +191,89 @@ Return ONLY JSON.
 No explanations. No markdown. No comments.
 """
 
+AUDIO_TRANSCRIPT_SYSTEM_PROMPT = """# SYSTEM ROLE
+
+You are KLYROS Audio Intelligence Engine.
+You are an enterprise AI system responsible for analyzing spoken brand communication.
+The transcript has already been generated using Whisper Tiny.
+Your task is NOT to summarize the transcript.
+Your task is to extract structured Brand Intelligence that will later be used to build the company's Brand Identity Model.
+Think and reason like all of the following experts simultaneously:
+• Brand Strategist
+• Marketing Consultant
+• Consumer Psychologist
+• Creative Director
+• Communication Expert
+• Storytelling Expert
+• Product Marketing Manager
+• Business Analyst
+
+# OBJECTIVE
+Analyze the transcript and determine:
+• What is the brand communicating?
+• How is it communicating?
+• Who is it targeting?
+• What emotions does it try to evoke?
+• What business objective does it serve?
+• What personality does the brand exhibit?
+Never invent information.
+Only use evidence from the transcript.
+If information is unavailable, return null.
+
+# INPUT
+Transcript
+{{TRANSCRIPT}}
+
+# OUTPUT RULES
+Return ONLY valid JSON.
+No markdown.
+No explanation.
+No comments.
+No natural language.
+Every field MUST follow this schema.
+{
+"value":"",
+"confidence":95,
+"evidence":"Quote from transcript"
+}
+For list fields
+{
+"value":[...],
+"confidence":95,
+"evidence":[...]
+}
+For score fields
+{
+"value":87,
+"confidence":96,
+"evidence":"..."
+}
+If unknown
+{
+"value":null,
+"confidence":0,
+"evidence":"Not present in transcript"
+}
+
+# OUTPUT FORMAT
+{
+  "brand_voice": {},
+  "brand_messaging": {},
+  "marketing_strategy": {},
+  "emotional_analysis": {},
+  "target_audience": {},
+  "customer_persona": {},
+  "storytelling": {},
+  "product_intelligence": {},
+  "brand_personality": {},
+  "brand_positioning": {},
+  "quality": {},
+  "insights": {}
+}
+
+Return STRICT JSON ONLY.
+"""
+
 def clean_json_response(raw_text: str) -> Dict[str, Any]:
     cleaned = raw_text.strip()
     if cleaned.startswith("```json"):
@@ -200,23 +285,87 @@ def clean_json_response(raw_text: str) -> Dict[str, Any]:
     cleaned = cleaned.strip()
     return json.loads(cleaned)
 
+
+def get_provider_settings(kind: str) -> Tuple[Optional[str], str, str, str]:
+    provider = "qwen"
+    key = settings.QWEN_API_KEY or settings.VISION_API_KEY or settings.TEXT_API_KEY
+    base_url = settings.QWEN_BASE_URL
+    model = settings.QWEN_VISION_MODEL if kind == "vision" else settings.QWEN_TEXT_MODEL
+    return key, base_url, model, provider
+
+
 class GroqBrandAnalyzer:
     @staticmethod
-    def file_to_base64(file_path: str) -> Optional[str]:
+    def file_to_base64(file_path: str, max_dim: int = 1024) -> Optional[str]:
         if not os.path.exists(file_path):
             return None
         try:
+            # Optimize images to max 1024px JPEG quality 85 for 100x faster base64 network payloads
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in [".png", ".jpg", ".jpeg", ".webp", ".bmp"]:
+                with Image.open(file_path) as img:
+                    img = img.convert("RGB")
+                    img.thumbnail((max_dim, max_dim))
+                    buffer = io.BytesIO()
+                    img.save(buffer, format="JPEG", quality=85)
+                    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+            
             with open(file_path, "rb") as f:
                 return base64.b64encode(f.read()).decode("utf-8")
         except Exception as e:
-            logger.error(f"Error reading file for base64 encoding ({file_path}): {e}")
-            return None
+            logger.error(f"Error optimizing file for base64 encoding ({file_path}): {e}")
+            try:
+                with open(file_path, "rb") as f:
+                    return base64.b64encode(f.read()).decode("utf-8")
+            except Exception:
+                return None
+
+    @staticmethod
+    def analyze_transcript(transcript_text: str, api_key: Optional[str] = None) -> Dict[str, Any]:
+        if not transcript_text or not transcript_text.strip():
+            return {}
+
+        key, base_url, model, provider = get_provider_settings("text")
+        key = api_key or key
+        if not key:
+            logger.info("No text AI API key configured for %s. Skipping transcript analysis.", provider)
+            return {}
+
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": AUDIO_TRANSCRIPT_SYSTEM_PROMPT.replace("{{TRANSCRIPT}}", transcript_text)},
+                {"role": "user", "content": transcript_text}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.2
+        }
+
+        try:
+            url = f"{base_url.rstrip('/')}/chat/completions"
+            response = requests.post(url, headers=headers, json=payload, timeout=25)
+            if response.status_code == 200:
+                resp_json = response.json()
+                raw_text = resp_json["choices"][0]["message"]["content"]
+                return clean_json_response(raw_text)
+            else:
+                logger.error(f"{provider.upper()} transcript API error {response.status_code}: {response.text}")
+        except Exception as e:
+            logger.error(f"Failed to analyze transcript with {provider.upper()}: {e}")
+
+        return {}
 
     @staticmethod
     def analyze_asset(file_path: str, mime_type: str, api_key: Optional[str] = None) -> Dict[str, Any]:
-        key = api_key or settings.GROQ_API_KEY
+        key, base_url, model, provider = get_provider_settings("vision")
+        key = api_key or key
         if not key:
-            logger.info("GROQ_API_KEY not provided. Skipping Groq API call.")
+            logger.info("No vision AI API key configured for %s. Skipping asset analysis.", provider)
             return {}
 
         headers = {
@@ -225,17 +374,17 @@ class GroqBrandAnalyzer:
         }
 
         b64_data = GroqBrandAnalyzer.file_to_base64(file_path)
-        
-        if mime_type.startswith("image/") and b64_data and "vision" in settings.GROQ_VISION_MODEL:
+
+        if mime_type.startswith("image/") and b64_data and "vision" in model.lower():
             user_content = [
                 {"type": "text", "text": f"Analyze this brand asset ({mime_type}). Extract full structured Brand Intelligence JSON."},
-                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64_data}"}}
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}}
             ]
         else:
             user_content = f"Analyze this brand asset ({mime_type}). File: {os.path.basename(file_path)}. Extract full structured Brand Intelligence JSON."
 
         payload = {
-            "model": settings.GROQ_VISION_MODEL,
+            "model": model,
             "messages": [
                 {"role": "system", "content": SINGLE_ASSET_SYSTEM_PROMPT},
                 {"role": "user", "content": user_content}
@@ -245,22 +394,23 @@ class GroqBrandAnalyzer:
         }
 
         try:
-            url = f"{settings.GROQ_BASE_URL.rstrip('/')}/chat/completions"
-            response = requests.post(url, headers=headers, json=payload, timeout=45)
+            url = f"{base_url.rstrip('/')}/chat/completions"
+            response = requests.post(url, headers=headers, json=payload, timeout=20)
             if response.status_code == 200:
                 resp_json = response.json()
                 raw_text = resp_json["choices"][0]["message"]["content"]
                 return clean_json_response(raw_text)
             else:
-                logger.error(f"Groq API error {response.status_code}: {response.text}")
+                logger.error(f"{provider.upper()} API error {response.status_code}: {response.text}")
         except Exception as e:
-            logger.error(f"Failed to analyze asset with Groq: {e}")
+            logger.error(f"Failed to analyze asset with {provider.upper()}: {e}")
 
         return {}
 
     @staticmethod
     def aggregate_identity(brand_name: str, extracted_assets_json: List[Dict[str, Any]], api_key: Optional[str] = None) -> Dict[str, Any]:
-        key = api_key or settings.GROQ_API_KEY
+        key, base_url, model, provider = get_provider_settings("text")
+        key = api_key or key
         if not key:
             return {}
 
@@ -269,10 +419,10 @@ class GroqBrandAnalyzer:
             "Content-Type": "application/json"
         }
 
-        prompt_text = f"Brand Name: {brand_name}\nAssets Extracted Intelligence:\n{json.dumps(extracted_assets_json, indent=2)[:12000]}"
+        prompt_text = f"Brand Name: {brand_name}\nAssets Extracted Intelligence:\n{json.dumps(extracted_assets_json, indent=2)[:10000]}"
 
         payload = {
-            "model": settings.GROQ_TEXT_MODEL,
+            "model": model,
             "messages": [
                 {"role": "system", "content": BRAND_IDENTITY_AGGREGATOR_PROMPT},
                 {"role": "user", "content": prompt_text}
@@ -282,15 +432,15 @@ class GroqBrandAnalyzer:
         }
 
         try:
-            url = f"{settings.GROQ_BASE_URL.rstrip('/')}/chat/completions"
-            response = requests.post(url, headers=headers, json=payload, timeout=45)
+            url = f"{base_url.rstrip('/')}/chat/completions"
+            response = requests.post(url, headers=headers, json=payload, timeout=25)
             if response.status_code == 200:
                 resp_json = response.json()
                 raw_text = resp_json["choices"][0]["message"]["content"]
                 return clean_json_response(raw_text)
             else:
-                logger.error(f"Groq Aggregator API error {response.status_code}: {response.text}")
+                logger.error(f"{provider.upper()} Aggregator API error {response.status_code}: {response.text}")
         except Exception as e:
-            logger.error(f"Failed to aggregate identity with Grok: {e}")
+            logger.error(f"Failed to aggregate identity with {provider.upper()}: {e}")
 
         return {}

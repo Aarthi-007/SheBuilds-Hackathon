@@ -116,5 +116,9 @@ def run_e2e_tests():
 
     print("\n--- All 10 Klyros Backend Modules Passed Verification! ---")
 
-if __name__ == "__main__":
+def test_e2e_flow():
     run_e2e_tests()
+
+
+if __name__ == "__main__":
+    test_e2e_flow()
