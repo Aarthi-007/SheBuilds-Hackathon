@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # Groq API Config
     GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY", None)
     GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-    GROQ_VISION_MODEL: str = os.getenv("GROQ_VISION_MODEL", "llama-3.2-11b-vision-preview")
+    GROQ_VISION_MODEL: str = os.getenv("GROQ_VISION_MODEL", "llama-3.3-70b-versatile")
     GROQ_TEXT_MODEL: str = os.getenv("GROQ_TEXT_MODEL", "llama-3.3-70b-versatile")
     
     # Storage Config

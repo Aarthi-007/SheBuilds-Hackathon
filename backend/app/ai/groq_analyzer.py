@@ -224,16 +224,15 @@ class GroqBrandAnalyzer:
             "Content-Type": "application/json"
         }
 
-        user_content = [
-            {"type": "text", "text": f"Analyze this brand asset ({mime_type}). Extract full structured Brand Intelligence JSON."}
-        ]
-
         b64_data = GroqBrandAnalyzer.file_to_base64(file_path)
-        if b64_data and mime_type.startswith("image/"):
-            data_url = f"data:{mime_type};base64,{b64_data}"
-            user_content.append({"type": "image_url", "image_url": {"url": data_url}})
+        
+        if mime_type.startswith("image/") and b64_data and "vision" in settings.GROQ_VISION_MODEL:
+            user_content = [
+                {"type": "text", "text": f"Analyze this brand asset ({mime_type}). Extract full structured Brand Intelligence JSON."},
+                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64_data}"}}
+            ]
         else:
-            user_content.append({"type": "text", "text": f"Asset File Name: {os.path.basename(file_path)}, MIME: {mime_type}"})
+            user_content = f"Analyze this brand asset ({mime_type}). File: {os.path.basename(file_path)}. Extract full structured Brand Intelligence JSON."
 
         payload = {
             "model": settings.GROQ_VISION_MODEL,
@@ -292,6 +291,6 @@ class GroqBrandAnalyzer:
             else:
                 logger.error(f"Groq Aggregator API error {response.status_code}: {response.text}")
         except Exception as e:
-            logger.error(f"Failed to aggregate identity with Groq: {e}")
+            logger.error(f"Failed to aggregate identity with Grok: {e}")
 
         return {}
