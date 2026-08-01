@@ -213,7 +213,10 @@ async function uploadAssets() {
     }, 500);
 
     if (json.success) {
-      loadBrandAssets();
+      await loadBrandAssets();
+      // Auto-trigger Groq AI identity processing to move pending assets to completed
+      await triggerBuildIdentity();
+      await loadBrandAssets();
     }
   } catch (err) {
     alert("Upload failed: " + err.message);
