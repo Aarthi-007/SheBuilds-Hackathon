@@ -35,6 +35,11 @@ app.add_middleware(
 os.makedirs(settings.STORAGE_DIR, exist_ok=True)
 app.mount("/storage", StaticFiles(directory=settings.STORAGE_DIR), name="storage")
 
+# Optional mount for Mock Frontend Test Bench (Easily deletable)
+mock_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "mock_frontend")
+if os.path.exists(mock_dir):
+    app.mount("/mock", StaticFiles(directory=mock_dir, html=True), name="mock_frontend")
+
 # Register API v1 routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
@@ -44,7 +49,8 @@ async def root():
         "status": "online",
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "docs": f"{settings.BASE_URL}/docs"
+        "docs": f"{settings.BASE_URL}/docs",
+        "mock_frontend": f"{settings.BASE_URL}/mock/"
     }
 
 if __name__ == "__main__":
