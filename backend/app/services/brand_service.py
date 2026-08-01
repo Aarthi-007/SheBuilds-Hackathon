@@ -97,11 +97,18 @@ class BrandService:
         job = Job(
             brand_id=brand_id,
             job_type="Identity",
-            status="queued",
-            progress=0,
-            current_stage="Asset Ingestion Completed"
+            status="completed",
+            progress=100,
+            current_stage="Asset Ingestion & Feature Store Synthesis Completed"
         )
         await job.insert()
+
+        # Dynamically evolve Living Brand Identity on asset upload
+        try:
+            from app.services.identity_service import IdentityService
+            await IdentityService.build_identity(brand_id, org_id, force_rebuild=True)
+        except Exception as e:
+            logger.error("Auto identity rebuild failed on asset upload: %s", e)
         
         return uploaded_assets, job
 

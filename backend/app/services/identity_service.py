@@ -38,6 +38,24 @@ class IdentityService:
 
         assets = await BrandAsset.find({"brand_id": brand_id}).to_list()
 
+        # Step 0: Ensure Brand description & metadata features exist in FeatureStore
+        brand_text_content = f"Brand Name: {brand.name}. Industry: {brand.industry or 'General'}. Description: {brand.description or brand.name}"
+        brand_meta_asset = {
+            "id": f"brand_meta_{brand_id}",
+            "asset_type": "text",
+            "filename": f"{brand.name}_metadata",
+            "storage_path": "",
+            "metadata": {
+                "extracted_text": brand_text_content,
+                "description": brand.description
+            }
+        }
+        await MultimodalAnalyzer.extract_and_store_features_async(
+            brand_id=brand_id,
+            asset=brand_meta_asset,
+            api_key=groq_api_key
+        )
+
         # Step 1: Run Multimodal Feature Extraction into Feature Store for all assets
         for asset in assets:
             asset_dict = {
@@ -265,9 +283,7 @@ class IdentityService:
 
         identity = await BrandIdentity.find_one({"brand_id": brand_id})
         assets = await BrandAsset.find({"brand_id": brand_id}).to_list()
-        if not identity:
-            identity, _ = await IdentityService.build_identity(brand_id, org_id)
-        elif len(assets) != identity.assets_processed_count or identity.status != "ready":
+        if not identity or len(assets) != identity.assets_processed_count or identity.status != "ready":
             identity, _ = await IdentityService.build_identity(brand_id, org_id, force_rebuild=True)
 
         return identity

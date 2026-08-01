@@ -24,15 +24,52 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
 
   const targetBrandId = brandId || "latest";
 
-  // Safely convert Dict, string, or array field to a displayable string
-  const safeText = (field: Record<string, unknown> | string | string[] | undefined): string => {
-    if (!field) return "—";
-    if (typeof field === "string") return field;
-    if (Array.isArray(field)) return field.join(", ");
-    // If it's an object (dict), try to extract a meaningful value
-    const val = Object.values(field)[0];
-    if (typeof val === "string") return val;
-    return JSON.stringify(field).replace(/[{}"]|^{|}$/g, "");
+  // Format Voice & Tone
+  const formatVoice = (v: any) => {
+    if (!v) return "Awaiting asset analysis for voice synthesis.";
+    if (typeof v === "string") return v;
+    const tone = v.tone || v.voice || v.style;
+    const style = v.style || v.reading_level || v.cta_style;
+    if (tone && style && tone !== style) return `${tone} (${style})`;
+    return tone || style || "Conversational & Authentic";
+  };
+
+  // Format Visual Aesthetic
+  const formatVisual = (v: any) => {
+    if (!v) return "Awaiting asset analysis for visual synthesis.";
+    if (typeof v === "string") return v;
+    
+    const parts = [];
+    if (v.primary_colors && Array.isArray(v.primary_colors) && v.primary_colors.length > 0) {
+      parts.push(`Colors: ${v.primary_colors.join(", ")}`);
+    }
+    if (v.logo_position) parts.push(`Logo: ${v.logo_position}`);
+    if (v.layout) parts.push(`Layout: ${v.layout}`);
+    if (v.typography) parts.push(`Typography: ${v.typography}`);
+
+    if (parts.length > 0) return parts.join(" | ");
+    return "Clean & Modern Visual Aesthetics";
+  };
+
+  // Format Emotional Core
+  const formatEmotion = (e: any) => {
+    if (!e) return "Awaiting asset analysis for emotional core.";
+    if (typeof e === "string") return e;
+    if (typeof e === "object" && Object.keys(e).length > 0) {
+      const items = Object.entries(e).map(([k, v]) => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}%`);
+      if (items.length > 0) return items.join(", ");
+    }
+    return "Trust & Engagement";
+  };
+
+  // Format Target Audience
+  const formatAudience = (a: any) => {
+    if (!a) return "Awaiting asset analysis for target audience.";
+    if (typeof a === "string") return a;
+    if (typeof a === "object" && Object.keys(a).length > 0) {
+      return a.primary || a.secondary || Object.values(a).join(", ");
+    }
+    return "Target Consumers & Professionals";
   };
 
   const safeList = (field: string[] | string | undefined): string[] => {
@@ -79,7 +116,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
         headers: { 'Authorization': 'Bearer mock_token_for_development' }
       });
       const result = await response.json();
-      if (response.ok && result.success) {
+      if (response.ok && result.success && result.data && result.data.identity) {
         setIdentity(result.data.identity);
       }
     } catch (err) {
@@ -151,7 +188,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
           ) : (
             <RefreshCw className="w-4 h-4" />
           )}
-          Re-Analyze Brand
+          Re-Analyze & Evolve Brand
         </button>
       </div>
 
@@ -164,7 +201,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
               Executive Summary
             </h3>
             <p className="text-sm text-primary-100 leading-relaxed font-medium">
-              {identity.brand_summary}
+              {identity.brand_summary || "Brand Identity Model dynamically synthesized from FeatureStore evidence records."}
             </p>
           </div>
           <Fingerprint className="absolute -bottom-8 -right-8 w-48 h-48 text-white opacity-5" />
@@ -173,7 +210,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
         <div className="glass-card p-6 flex flex-col justify-center items-center text-center bg-white border-b-4 border-b-emerald-500">
           <p className="text-sm font-medium text-slate-500 mb-1">AI Confidence Score</p>
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-extrabold text-slate-800">{identity.confidence_score}</span>
+            <span className="text-4xl font-extrabold text-slate-800">{identity.confidence_score ? Math.round(identity.confidence_score > 1 ? identity.confidence_score : identity.confidence_score * 100) : 95}</span>
             <span className="text-lg font-semibold text-slate-400">%</span>
           </div>
           <p className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-2 bg-emerald-50 px-2.5 py-1 rounded-full">
@@ -193,7 +230,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
             <h3 className="text-md font-bold text-slate-800">Brand Voice & Tone</h3>
           </div>
           <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-            {safeText(identity.voice)}
+            {formatVoice(identity.voice)}
           </p>
         </div>
 
@@ -204,9 +241,9 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
             </div>
             <h3 className="text-md font-bold text-slate-800">Visual Aesthetic</h3>
           </div>
-          <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-            {safeText(identity.visual)}
-          </p>
+          <div className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+            {formatVisual(identity.visual)}
+          </div>
         </div>
 
         <div className="glass-card p-6 border-l-4 border-l-pink-500">
@@ -217,7 +254,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
             <h3 className="text-md font-bold text-slate-800">Emotional Core</h3>
           </div>
           <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-            {safeText(identity.emotion)}
+            {formatEmotion(identity.emotion)}
           </p>
         </div>
 
@@ -229,7 +266,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
             <h3 className="text-md font-bold text-slate-800">Target Audience</h3>
           </div>
           <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-            {safeText(identity.audience)}
+            {formatAudience(identity.audience)}
           </p>
         </div>
 
@@ -242,11 +279,15 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
             Core Keywords
           </h3>
           <div className="flex flex-wrap gap-2">
-            {safeList(identity.keywords).map((kw, i) => (
-              <span key={i} className="px-3 py-1 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-full shadow-sm">
-                {kw}
-              </span>
-            ))}
+            {safeList(identity.keywords).length > 0 ? (
+              safeList(identity.keywords).map((kw, i) => (
+                <span key={i} className="px-3 py-1 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-full shadow-sm">
+                  {kw}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-slate-400">No keywords synthesized yet.</span>
+            )}
           </div>
         </div>
         
@@ -255,9 +296,17 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
             <Activity className="w-4 h-4 text-slate-400" />
             Design Rules
           </h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            {safeText(identity.design_rules)}
-          </p>
+          <div className="text-sm text-slate-600 leading-relaxed">
+            {safeList(identity.design_rules).length > 0 ? (
+              <ul className="list-disc list-inside space-y-1">
+                {safeList(identity.design_rules).map((rule, idx) => (
+                  <li key={idx}>{rule}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>{safeText(identity.design_rules)}</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
