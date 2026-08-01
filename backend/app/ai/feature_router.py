@@ -273,7 +273,7 @@ class FeatureRouter:
         if model_name == "pymupdf":
             return cls._extract_pymupdf_feature(feature_name, raw_data)
         if model_name == "sentence_transformer":
-            return cls._extract_embedding_feature(feature_name, raw_data)
+            return cls._extract_embedding_feature(feature_name, raw_data, qwen_payload)
         return None
 
     @classmethod
@@ -342,26 +342,37 @@ class FeatureRouter:
         return raw_data.get("pdf_text")
 
     @classmethod
-    def _extract_embedding_feature(cls, feature_name: str, raw_data: Dict[str, Any]) -> Any:
+    def _extract_embedding_feature(
+        cls,
+        feature_name: str,
+        raw_data: Dict[str, Any],
+        qwen_payload: Dict[str, Any]
+    ) -> Any:
         if feature_name != "embedding":
             return None
 
-        embed_model = model_manager.get_model("sentence_transformer")
-        if embed_model is None:
+        # Multimodal Embedding Fusion: Combine transcript, OCR text, PDF text, and Qwen features into a unified fusion representation
+        fusion_parts: List[str] = []
+        if raw_data.get("transcript"):
+            fusion_parts.append(f"Transcript: {raw_data['transcript']}")
+        if raw_data.get("ocr_text"):
+            fusion_parts.append(f"OCR: {raw_data['ocr_text']}")
+        if raw_data.get("pdf_text"):
+            fusion_parts.append(f"PDF: {raw_data['pdf_text']}")
+
+        if qwen_payload and isinstance(qwen_payload, dict):
+            for k in ["brand_voice", "visual_style", "marketing_strategy", "value_proposition", "emotion", "brand_personality"]:
+                if qwen_payload.get(k):
+                    fusion_parts.append(f"{k}: {qwen_payload[k]}")
+
+        if not fusion_parts and raw_data.get("text"):
+            fusion_parts.append(str(raw_data["text"]))
+
+        fused_text = " | ".join(fusion_parts).strip()
+        if not fused_text:
             return None
 
-        text_source = raw_data.get("text") or raw_data.get("transcript") or raw_data.get("ocr_text") or raw_data.get("pdf_text")
-        if not text_source:
-            return None
-
-        try:
-            vector = embed_model.encode(text_source, convert_to_numpy=True)
-            if hasattr(vector, "tolist"):
-                return vector.tolist()
-            return list(vector)
-        except Exception as e:
-            logger.error("SentenceTransformer embedding error: %s", e)
-            return None
+        return model_manager._get_embedding_sync(fused_text)
 
     @classmethod
     def _select_headline_from_text(cls, text: str) -> Optional[str]:

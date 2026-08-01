@@ -73,6 +73,8 @@ class BrandService:
                 asset_type = "image"
             elif file_meta["mime_type"].startswith("video/"):
                 asset_type = "video"
+            elif file_meta["mime_type"].startswith("audio/"):
+                asset_type = "audio"
             elif file_meta["mime_type"] == "application/pdf":
                 asset_type = "pdf"
                 
