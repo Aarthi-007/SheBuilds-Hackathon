@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Activity, Play, Sparkles, TrendingUp, ChevronRight, FileText, Settings2, CheckCircle } from "lucide-react";
 import { clsx } from "clsx";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 interface OptimizationReport {
   id: string;
@@ -38,12 +39,9 @@ export function ImpactSimulationView({ brandId }: { brandId?: string }) {
     
     try {
       // Step 1: Create a temporary campaign in the backend to establish the DB relationships
-      const createResponse = await fetch(`http://localhost:8000/api/v1/campaigns`, {
+      const createResponse = await fetch(`${API_BASE}/campaigns`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer mock_token_for_development"
-        },
+        headers: buildHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           brand_id: targetBrandId,
           title: "Simulation Temp Campaign",
@@ -57,9 +55,7 @@ export function ImpactSimulationView({ brandId }: { brandId?: string }) {
       const createResult = await createResponse.json();
       
       if (!createResponse.ok || !createResult.success) {
-        // Fallback immediately instead of throwing error
-        setReport(getMockReport());
-        setOptimizedText(getMockOptimizedText(textContent));
+        setError(createResult.message || "Unable to create campaign for simulation.");
         setIsSimulating(false);
         return;
       }
@@ -68,12 +64,9 @@ export function ImpactSimulationView({ brandId }: { brandId?: string }) {
       const versionId = createResult.data.version.id;
 
       // Step 2: Run the optimization engine on this new campaign
-      const optResponse = await fetch(`http://localhost:8000/api/v1/optimization/run`, {
+      const optResponse = await fetch(`${API_BASE}/optimization/run`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer mock_token_for_development"
-        },
+        headers: buildHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           campaign_id: campaignId,
           campaign_version_id: versionId,
@@ -87,32 +80,17 @@ export function ImpactSimulationView({ brandId }: { brandId?: string }) {
         setReport(optResult.data.report);
         setOptimizedText(optResult.data.optimized_text);
       } else {
-        // Hackathon fallback
-        setReport(getMockReport());
-        setOptimizedText(getMockOptimizedText(textContent));
+        setError(optResult.message || "Optimization failed.");
       }
 
     } catch (err: any) {
-      // Silently fall back to avoid Next.js dev overlay from catching console.error(err)
-      setReport(getMockReport());
-      setOptimizedText(getMockOptimizedText(textContent));
+      console.error(err);
+      setError("Network error during optimization.");
     } finally {
       setIsSimulating(false);
     }
   };
 
-  const getMockReport = (): OptimizationReport => ({
-    id: "mock-opt-123",
-    original_version: 1,
-    optimized_version: 2,
-    validation_score_before: 72,
-    validation_score_after: 96,
-    overall_improvement: 24
-  });
-
-  const getMockOptimizedText = (original: string): string => {
-    return `✨ This is an AI-optimized version of your copy, perfectly tailored for ${platform} with a ${targetTone} tone!\n\n${original}\n\n👉 Let's build the future together! 🚀 #Innovation #TechLeadership`;
-  };
 
   return (
     <div className="space-y-6">

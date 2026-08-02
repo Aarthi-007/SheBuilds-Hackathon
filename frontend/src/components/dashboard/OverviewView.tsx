@@ -22,8 +22,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from "recharts";
-
-const AUTH = { Authorization: "Bearer mock_token_for_development" };
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 function getFileIcon(type: string) {
   if (type === "image") return <ImageIcon className="w-5 h-5 text-blue-500" />;
@@ -41,15 +40,15 @@ export function OverviewView({ setActiveTab, brandId }: { setActiveTab: (tab: st
 
   useEffect(() => {
     fetchDashboard();
-  }, [targetBrandId]);
+  }, [brandId]);
 
   const fetchDashboard = async () => {
     setIsLoading(true);
     try {
       const [dashRes, brandRes, assetsRes] = await Promise.all([
-        fetch("http://localhost:8000/api/v1/dashboard", { headers: AUTH }),
-        fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}`, { headers: AUTH }),
-        fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}/assets`, { headers: AUTH }),
+        fetch(`${API_BASE}/dashboard`, { headers: buildHeaders() }),
+        fetch(`${API_BASE}/brands/${targetBrandId}`, { headers: buildHeaders() }),
+        fetch(`${API_BASE}/brands/${targetBrandId}/assets`, { headers: buildHeaders() }),
       ]);
 
       if (dashRes.ok) {
@@ -71,18 +70,7 @@ export function OverviewView({ setActiveTab, brandId }: { setActiveTab: (tab: st
     }
   };
 
-  // Build chart data from last 7 days of activity
-  const trendData = dashboard?.recent_activities
-    ? [
-        { name: 'Mon', relevance: 65, industry: 55 },
-        { name: 'Tue', relevance: 72, industry: 58 },
-        { name: 'Wed', relevance: 68, industry: 60 },
-        { name: 'Thu', relevance: 85, industry: 62 },
-        { name: 'Fri', relevance: 82, industry: 65 },
-        { name: 'Sat', relevance: 91, industry: 63 },
-        { name: 'Sun', relevance: 94, industry: 66 },
-      ]
-    : [];
+  const trendData = dashboard?.trend_series || [];
 
   const score = dashboard?.avg_certification_score ?? 94;
   const totalBrands = dashboard?.total_brands ?? 0;
@@ -185,18 +173,24 @@ export function OverviewView({ setActiveTab, brandId }: { setActiveTab: (tab: st
             </button>
           </div>
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Line type="monotone" dataKey="relevance" name="Brand Relevance" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: '#2563eb' }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="industry" name="Industry Baseline" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Line type="monotone" dataKey="relevance" name="Brand Relevance" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: '#2563eb' }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="industry" name="Industry Baseline" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 text-slate-500">
+                No trend series available yet. Upload assets and run trend discovery to populate this chart.
+              </div>
+            )}
           </div>
         </div>
 

@@ -11,6 +11,7 @@ import { TrendAnalyticsView } from "@/components/dashboard/TrendAnalyticsView";
 import { ImpactSimulationView } from "@/components/dashboard/ImpactSimulationView";
 import { SettingsView } from "@/components/dashboard/SettingsView";
 import { CopilotView } from "@/components/dashboard/CopilotView";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 export default function DashboardClient() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -24,8 +25,8 @@ export default function DashboardClient() {
 
   const fetchBrands = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/v1/brands", {
-        headers: { Authorization: "Bearer mock_token_for_development" }
+      const res = await fetch(`${API_BASE}/brands`, {
+        headers: buildHeaders()
       });
       if (res.ok) {
         const result = await res.json();

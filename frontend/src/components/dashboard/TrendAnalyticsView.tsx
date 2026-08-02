@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, TrendingUp, Activity, BarChart2, Zap, Target, Search, Hash } from "lucide-react";
 import { clsx } from "clsx";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 interface TrendReportDTO {
   id: string;
@@ -32,12 +33,9 @@ export function TrendAnalyticsView({ brandId }: { brandId?: string }) {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/trends/discover`, {
+      const response = await fetch(`${API_BASE}/trends/discover`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer mock_token_for_development"
-        },
+        headers: buildHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           brand_id: targetBrandId,
           category: null
@@ -49,44 +47,16 @@ export function TrendAnalyticsView({ brandId }: { brandId?: string }) {
       if (response.ok && result.success) {
         setTrends(result.data);
       } else {
-        // Hackathon fallback
-        setTrends(getMockTrends());
+        setError(result.message || "Unable to discover trends.");
       }
     } catch (err) {
       console.error(err);
-      // Hackathon fallback
-      setTrends(getMockTrends());
+      setError("Network error while discovering trends.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getMockTrends = (): TrendReportDTO[] => ([
-    {
-      id: "t1",
-      trend: "Ethical AI in Enterprise",
-      category: "Technology",
-      alignment_score: 95,
-      trend_score: 88,
-      competition_score: 45,
-      forecast_score: 92,
-      recommended_platform: "LinkedIn",
-      best_posting_time: "Tuesday, 10:00 AM",
-      hashtags: ["EthicalAI", "EnterpriseTech", "FutureOfWork"]
-    },
-    {
-      id: "t2",
-      trend: "Sustainable Scaling",
-      category: "Business",
-      alignment_score: 85,
-      trend_score: 92,
-      competition_score: 60,
-      forecast_score: 89,
-      recommended_platform: "Twitter / X",
-      best_posting_time: "Wednesday, 2:00 PM",
-      hashtags: ["Sustainability", "TechScaling", "GreenTech"]
-    }
-  ]);
 
   const ScoreCircle = ({ score, label }: { score: number, label: string }) => {
     const radius = 24;

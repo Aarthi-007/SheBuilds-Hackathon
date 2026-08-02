@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { User, Building2, Key, Bell, Save, CheckCircle, Shield, CreditCard } from "lucide-react";
 import { clsx } from "clsx";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 export function SettingsView() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -37,8 +38,8 @@ export function SettingsView() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/v1/settings", {
-          headers: { 'Authorization': 'Bearer mock_token_for_development' }
+        const response = await fetch(`${API_BASE}/settings`, {
+          headers: buildHeaders()
         });
         if (response.ok) {
           const result = await response.json();
@@ -46,6 +47,8 @@ export function SettingsView() {
             setProfile(prev => ({ ...prev, ...result.data.profile }));
             setOrg(prev => ({ ...prev, ...result.data.organization }));
           }
+        } else {
+          console.error("Failed to fetch settings", response.statusText);
         }
       } catch (err) {
         console.error("Failed to fetch settings", err);
@@ -66,12 +69,9 @@ export function SettingsView() {
       if (apiKeys.groq) localStorage.setItem("groq_api_key", apiKeys.groq);
       
       // Save Profile
-      await fetch("http://localhost:8000/api/v1/settings/profile", {
+      await fetch(`${API_BASE}/settings/profile`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock_token_for_development'
-        },
+        headers: buildHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           full_name: profile.fullName,
           email: profile.email
@@ -79,12 +79,9 @@ export function SettingsView() {
       });
 
       // Save Organization
-      await fetch("http://localhost:8000/api/v1/settings/organization", {
+      await fetch(`${API_BASE}/settings/organization`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock_token_for_development'
-        },
+        headers: buildHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: org.name,
           industry: org.industry,

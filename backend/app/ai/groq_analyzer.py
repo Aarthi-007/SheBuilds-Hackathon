@@ -287,10 +287,19 @@ def clean_json_response(raw_text: str) -> Dict[str, Any]:
 
 
 def get_provider_settings(kind: str) -> Tuple[Optional[str], str, str, str]:
+    # Fallback to Groq if Qwen key is not present but Groq is available
+    if not settings.QWEN_API_KEY and settings.GROQ_API_KEY:
+        return settings.GROQ_API_KEY, settings.GROQ_BASE_URL, (settings.GROQ_VISION_MODEL if kind == "vision" else settings.GROQ_TEXT_MODEL), "groq"
+
     provider = "qwen"
     key = settings.QWEN_API_KEY or settings.VISION_API_KEY or settings.TEXT_API_KEY
     base_url = settings.QWEN_BASE_URL
     model = settings.QWEN_VISION_MODEL if kind == "vision" else settings.QWEN_TEXT_MODEL
+
+    # Final fallback if keys resolved to None but Groq is configured
+    if not key and settings.GROQ_API_KEY:
+        return settings.GROQ_API_KEY, settings.GROQ_BASE_URL, (settings.GROQ_VISION_MODEL if kind == "vision" else settings.GROQ_TEXT_MODEL), "groq"
+
     return key, base_url, model, provider
 
 

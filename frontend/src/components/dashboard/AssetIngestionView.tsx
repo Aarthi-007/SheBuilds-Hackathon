@@ -7,6 +7,7 @@ import {
   BarChart, Activity, Globe, Layout, Briefcase, Share2, Eye, Building2, TrendingUp
 } from "lucide-react";
 import { clsx } from "clsx";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 interface BrandAsset {
   id: string;
@@ -62,8 +63,8 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
   const fetchBrandData = async () => {
     try {
       // 1. Fetch Brand Info
-      const brandRes = await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}`, {
-        headers: { 'Authorization': 'Bearer mock_token_for_development' }
+      const brandRes = await fetch(`${API_BASE}/brands/${targetBrandId}`, {
+        headers: buildHeaders()
       });
       if (brandRes.ok) {
         const brandResult = await brandRes.json();
@@ -74,8 +75,8 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
       }
 
       // 2. Fetch Assets
-      const assetsRes = await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}/assets`, {
-        headers: { 'Authorization': 'Bearer mock_token_for_development' }
+      const assetsRes = await fetch(`${API_BASE}/brands/${targetBrandId}/assets`, {
+        headers: buildHeaders()
       });
       if (assetsRes.ok) {
         const assetsResult = await assetsRes.json();
@@ -85,8 +86,8 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
       }
 
       // 3. Fetch Identity (for purpose/overview)
-      const idRes = await fetch(`http://localhost:8000/api/v1/identity/${targetBrandId}`, {
-        headers: { 'Authorization': 'Bearer mock_token_for_development' }
+      const idRes = await fetch(`${API_BASE}/identity/${targetBrandId}`, {
+        headers: buildHeaders()
       });
       if (idRes.ok) {
         const idResult = await idRes.json();
@@ -154,11 +155,11 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
     
     // Step 1: Update Brand Category if changed
     try {
-      await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}`, {
+      await fetch(`${API_BASE}/brands/${targetBrandId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock_token_for_development'
+          ...buildHeaders()
         },
         body: JSON.stringify({ industry: brandCategory })
       });
@@ -174,11 +175,9 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
     formData.append("category", "Advertisements"); // Default category for now
     
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/brands/${targetBrandId}/assets`, {
+      const response = await fetch(`${API_BASE}/brands/${targetBrandId}/assets`, {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer mock_token_for_development'
-        },
+        headers: buildHeaders(),
         body: formData,
       });
       
@@ -188,12 +187,12 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
         setUploadStatus('success');
         setUploadMessage(result.message || "Assets uploaded successfully!");
       } else {
-        setUploadStatus('success');
-        setUploadMessage("Assets uploaded successfully! (Simulated)");
+        setUploadStatus('error');
+        setUploadMessage(result.message || "Failed to upload assets. Please try again.");
       }
     } catch (error) {
-      setUploadStatus('success');
-      setUploadMessage("Assets uploaded successfully! (Simulated)");
+      setUploadStatus('error');
+      setUploadMessage("Upload failed. Please check your connection and try again.");
       console.error(error);
     } finally {
       setFiles([]); // Clear files
@@ -409,7 +408,7 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">Brand Intelligence</h2>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{brandInfo?.name || "Mock Brand"} Portfolio</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{brandInfo?.name || "Brand"} Portfolio</p>
                 </div>
               </div>
               <button 
@@ -435,9 +434,9 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                          <span className="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-1 rounded-md border border-primary-100">{brandInfo.website}</span>
                        )}
                     </div>
-                    <h4 className="text-2xl font-extrabold text-slate-900 mb-4">{brandInfo?.name || "Mock Brand"}</h4>
+                    <h4 className="text-2xl font-extrabold text-slate-900 mb-4">{brandInfo?.name || "Brand"}</h4>
                     <p className="text-slate-600 leading-relaxed font-medium">
-                      {brandIdentity?.brand_summary || "A cutting-edge technology brand focused on empowering the next generation of builders with scalable tools and a visionary ethos."}
+                      {brandIdentity?.brand_summary || "Upload assets to generate your brand summary."}
                     </p>
                     <div className="mt-6 flex flex-wrap gap-2">
                       <span className="px-3 py-1 bg-primary-50 text-primary-700 text-xs font-bold rounded-full border border-primary-100">
@@ -452,10 +451,10 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                       ) : (
                         <>
                           <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full border border-indigo-100">
-                            Enterprise Grade
+                            {brandCategory}
                           </span>
                           <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-100">
-                            B2B Focus
+                            Strategic Growth
                           </span>
                         </>
                       )}
@@ -467,7 +466,7 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                 {/* Services & Socials */}
                 <div className="glass-card p-6 bg-slate-900 text-white flex flex-col justify-between relative overflow-hidden shadow-xl">
                   <div className="relative z-10">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Service & Links</h3>
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Service Focus</h3>
                     <ul className="space-y-3 mb-6">
                       {brandIdentity?.services && brandIdentity.services.length > 0 ? (
                         brandIdentity.services.map((service, idx) => (
@@ -478,13 +477,13 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                       ) : (
                         <>
                           <li className="flex items-center gap-2 text-sm font-medium">
-                            <CheckCircle className="w-4 h-4 text-emerald-400" /> Web Development
+                            <CheckCircle className="w-4 h-4 text-emerald-400" /> {brandCategory} Innovation
                           </li>
                           <li className="flex items-center gap-2 text-sm font-medium">
-                            <CheckCircle className="w-4 h-4 text-emerald-400" /> Cloud Architecture
+                            <CheckCircle className="w-4 h-4 text-emerald-400" /> Strategic Scaling
                           </li>
                           <li className="flex items-center gap-2 text-sm font-medium">
-                            <CheckCircle className="w-4 h-4 text-emerald-400" /> AI Automation
+                            <CheckCircle className="w-4 h-4 text-emerald-400" /> Digital Integration
                           </li>
                         </>
                       )}
@@ -492,20 +491,14 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                   </div>
                   
                   <div className="relative z-10 pt-4 border-t border-slate-700">
-                     <p className="text-xs text-slate-400 mb-2 font-medium">Connect</p>
+                     <p className="text-xs text-slate-400 mb-2 font-medium">Links</p>
                      <div className="flex gap-2 flex-wrap">
-                        {brandIdentity?.social_links && Object.keys(brandIdentity.social_links).length > 0 ? (
-                          Object.entries(brandIdentity.social_links).map(([platform, link], idx) => (
-                            <a key={idx} href={link} target="_blank" rel="noreferrer" className="flex-1 text-center bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-semibold border border-slate-600 transition-colors">
-                              {platform}
-                            </a>
-                          ))
+                        {brandInfo?.website ? (
+                          <a href={brandInfo.website.startsWith('http') ? brandInfo.website : `https://${brandInfo.website}`} target="_blank" rel="noreferrer" className="flex-1 text-center bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-semibold border border-slate-600 transition-colors">
+                            Official Website
+                          </a>
                         ) : (
-                          <>
-                            <button className="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-semibold border border-slate-600 transition-colors">Website</button>
-                            <button className="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-semibold border border-slate-600 transition-colors">LinkedIn</button>
-                            <button className="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-semibold border border-slate-600 transition-colors">Twitter</button>
-                          </>
+                          <span className="text-xs text-slate-500 font-medium">No external links configured.</span>
                         )}
                      </div>
                   </div>
@@ -521,7 +514,7 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-500 uppercase">Avg Engagement</p>
-                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.avg_engagement || "4.8%"}</p>
+                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.avg_engagement ?? "N/A"}</p>
                   </div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
@@ -530,7 +523,7 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-500 uppercase">Monthly Reach</p>
-                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.monthly_reach || "1.2M"}</p>
+                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.monthly_reach ?? "N/A"}</p>
                   </div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
@@ -539,7 +532,7 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-500 uppercase">Post Validation</p>
-                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.post_validation || "92/100"}</p>
+                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.post_validation ?? "N/A"}</p>
                   </div>
                 </div>
               </div>
@@ -572,7 +565,7 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                         {asset.mime_type.startsWith('image/') ? (
                           <div 
                             className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                            style={{ backgroundImage: `url(http://localhost:8000${asset.storage_url})` }}
+                            style={{ backgroundImage: `url(${asset.storage_url})` }}
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 transition-transform duration-500 group-hover:scale-105">

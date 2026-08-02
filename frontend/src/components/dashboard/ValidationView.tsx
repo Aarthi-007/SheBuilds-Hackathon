@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, CheckCircle, AlertTriangle, AlertCircle, RefreshCw, BarChart } from "lucide-react";
 import { clsx } from "clsx";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 interface IssueDTO {
   category: string;
@@ -41,12 +42,9 @@ export function ValidationView({ brandId }: { brandId?: string }) {
     setError("");
     
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/validation/check`, {
+      const response = await fetch(`${API_BASE}/validation/check`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer mock_token_for_development"
-        },
+        headers: buildHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           brand_id: targetBrandId,
           text_content: textContent,
@@ -61,49 +59,16 @@ export function ValidationView({ brandId }: { brandId?: string }) {
       if (response.ok && result.success) {
         setReport(result.data);
       } else {
-        // Hackathon fallback
-        setReport(getMockReport());
+        setError(result.message || "Validation could not be completed.");
       }
     } catch (err) {
       console.error(err);
-      // Hackathon fallback
-      setReport(getMockReport());
+      setError("Network error during validation.");
     } finally {
       setIsChecking(false);
     }
   };
 
-  const getMockReport = (): ValidationReport => ({
-    id: "mock-123",
-    overall_score: 84,
-    scores: {
-      "Voice & Tone": 88,
-      "Visual Aesthetics": 92,
-      "Platform Fit": 75,
-      "Core Values": 90,
-      "Audience Targeting": 82,
-      "Compliance": 100
-    },
-    issues: [
-      {
-        category: "Platform Fit",
-        severity: "Medium",
-        message: "The copy is slightly too formal for Instagram's typical user base.",
-        solution: "Incorporate more emojis and conversational transitions."
-      },
-      {
-        category: "Voice & Tone",
-        severity: "Low",
-        message: "Missing the core keyword 'Innovation' which is highly recommended for this objective.",
-        solution: "Add 'Innovation' naturally into the opening hook."
-      }
-    ],
-    recommendations: [
-      "Shorten the first paragraph to increase retention on mobile feeds.",
-      "Add a stronger Call-To-Action (CTA) at the very end.",
-      "Consider using a carousel format to explain the complex concepts."
-    ]
-  });
 
   const getSeverityIcon = (severity: string) => {
     switch (severity.toLowerCase()) {

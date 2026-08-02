@@ -14,7 +14,8 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login logic, redirect to dashboard
+    // Mock login logic: store a development token and redirect to dashboard
+    localStorage.setItem("access_token", "mock_token_for_development");
     router.push("/dashboard");
   };
 

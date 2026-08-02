@@ -39,12 +39,28 @@ class DashboardService:
             {"title": "Active Market Trends", "value": len(trends) or 8, "change": "Real-time", "icon": "trending"}
         ]
 
-        recent_activities = [
-            {"activity": "Brand Identity Model synchronized", "timestamp": "Just now", "status": "Completed"},
-            {"activity": "Campaign Validation certified (Score 96.5%)", "timestamp": "10m ago", "status": "Passed"},
-            {"activity": "Closed-loop Optimization completed", "timestamp": "1h ago", "status": "Optimized"},
-            {"activity": "Trend Intelligence discover run", "timestamp": "2h ago", "status": "Recommended"}
-        ]
+        recent_activities = []
+        if brand_ids:
+            # 1. Fetch recent jobs
+            jobs = await Job.find({"brand_id": {"$in": brand_ids}}).sort("-created_at").limit(5).to_list()
+            for j in jobs:
+                recent_activities.append({
+                    "activity": f"AI job pipeline: {j.job_type} - {j.current_stage or 'processing'}",
+                    "timestamp": j.created_at.strftime("%H:%M:%S") if hasattr(j, "created_at") and j.created_at else "Just now",
+                    "status": j.status.capitalize()
+                })
+            # 2. Fetch validation activities
+            for r in val_reports[:3]:
+                recent_activities.append({
+                    "activity": f"Campaign Validation certified (Score {r.overall_score}%)",
+                    "timestamp": "Today",
+                    "status": "Passed" if r.overall_score >= 85 else "Reviewed"
+                })
+        
+        if not recent_activities:
+            recent_activities = [
+                {"activity": "Klyros AI Workspace initialized", "timestamp": "Just now", "status": "Ready"}
+            ]
 
         recent_campaign_list = [
             {"id": str(c.id), "title": c.title, "platform": c.platform, "status": c.status}
@@ -56,6 +72,23 @@ class DashboardService:
             for t in trends[:3]
         ]
 
+        # Build trend_series dynamically from actual trends in MongoDB
+        trend_series = []
+        for t in trends[:6]:
+            trend_series.append({
+                "name": t.trend[:12] + "..." if len(t.trend) > 12 else t.trend,
+                "relevance": t.alignment_score,
+                "industry": t.trend_score
+            })
+        
+        if not trend_series:
+            trend_series = [
+                {"name": "Week 1", "relevance": 88, "industry": 82},
+                {"name": "Week 2", "relevance": 92, "industry": 85},
+                {"name": "Week 3", "relevance": 90, "industry": 87},
+                {"name": "Week 4", "relevance": 94, "industry": 88}
+            ]
+
         return {
             "total_brands": total_brands,
             "total_campaigns": total_campaigns,
@@ -64,5 +97,6 @@ class DashboardService:
             "metrics": metrics,
             "recent_activities": recent_activities,
             "recent_campaigns": recent_campaign_list,
-            "top_aligned_trends": top_trends_list
+            "top_aligned_trends": top_trends_list,
+            "trend_series": trend_series
         }

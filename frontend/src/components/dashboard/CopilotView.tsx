@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Bot, Send, User, Sparkles, Zap, AlignLeft, BarChart2 } from "lucide-react";
 import { clsx } from "clsx";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 interface Message {
   id: string;
@@ -61,12 +62,9 @@ export function CopilotView({ brandId }: { brandId?: string }) {
         brand_id: targetBrandId
       };
 
-      const response = await fetch("http://localhost:8000/api/v1/copilot/chat", {
+      const response = await fetch(`${API_BASE}/copilot/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer mock_token_for_development"
-        },
+        headers: buildHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
 
@@ -86,7 +84,7 @@ export function CopilotView({ brandId }: { brandId?: string }) {
         id: (Date.now() + 1).toString(),
         role: "ai",
         content: aiResponse,
-        timestamp: new Date()
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
       setMessages(prev => [...prev, newAiMsg]);
@@ -96,7 +94,7 @@ export function CopilotView({ brandId }: { brandId?: string }) {
         id: (Date.now() + 1).toString(),
         role: "ai",
         content: "Network error occurred while connecting to Klyro Copilot.",
-        timestamp: new Date()
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
     } finally {
       setIsTyping(false);
@@ -168,7 +166,7 @@ export function CopilotView({ brandId }: { brandId?: string }) {
                   {msg.content.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} className={msg.role === "user" ? "text-white font-black" : "text-slate-900 font-black"}>{part}</strong> : part)}
                 </div>
                 <div className={clsx("text-[10px] mt-2", msg.role === "user" ? "text-slate-400 text-right" : "text-slate-400")}>
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {msg.timestamp}
                 </div>
               </div>
 

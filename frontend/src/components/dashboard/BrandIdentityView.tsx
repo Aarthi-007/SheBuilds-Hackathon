@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, Fingerprint, Activity, Tag, Users, CheckCircle, RefreshCw, Layers } from "lucide-react";
 import { clsx } from "clsx";
+import { API_BASE, buildHeaders } from "@/lib/api";
 
 interface BrandIdentityData {
   voice?: Record<string, unknown> | string;
@@ -86,8 +87,8 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/identity/${targetBrandId}`, {
-        headers: { 'Authorization': 'Bearer mock_token_for_development' }
+      const response = await fetch(`${API_BASE}/identity/${targetBrandId}`, {
+        headers: buildHeaders()
       });
       if (response.ok) {
         const result = await response.json();
@@ -95,12 +96,16 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
           setIdentity(result.data);
         } else {
           setIdentity(null);
+          setError(result.message || "Unable to load brand identity.");
         }
       } else {
+        const result = await response.json();
+        setError(result.detail || "Unable to load brand identity.");
         setIdentity(null);
       }
     } catch (err) {
       console.error(err);
+      setError("Network error while fetching brand identity.");
       setIdentity(null);
     } finally {
       setIsLoading(false);
@@ -111,16 +116,19 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
     setIsRebuilding(true);
     setError("");
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/identity/build/${targetBrandId}?force_rebuild=true`, {
+      const response = await fetch(`${API_BASE}/identity/build/${targetBrandId}?force_rebuild=true`, {
         method: "POST",
-        headers: { 'Authorization': 'Bearer mock_token_for_development' }
+        headers: buildHeaders()
       });
       const result = await response.json();
       if (response.ok && result.success && result.data && result.data.identity) {
         setIdentity(result.data.identity);
+      } else {
+        setError(result.message || "Failed to rebuild brand identity.");
       }
     } catch (err) {
       console.error(err);
+      setError("Network error when rebuilding brand identity.");
     } finally {
       setIsRebuilding(false);
     }
@@ -304,7 +312,7 @@ export function BrandIdentityView({ brandId }: { brandId?: string }) {
                 ))}
               </ul>
             ) : (
-              <p>{safeText(identity.design_rules)}</p>
+              <p className="text-xs text-slate-400">No design rules synthesized yet.</p>
             )}
           </div>
         </div>
