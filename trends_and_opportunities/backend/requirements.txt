@@ -1,0 +1,12 @@
+# New deps introduced by the Trends & Opportunities layer.
+# Merge into the main backend/requirements.txt.
+httpx>=0.27
+anthropic>=0.34
+pinecone
+motor>=3.5
+apscheduler>=3.10
+pydantic>=2.7
+pydantic-settings>=2.3
+fastapi>=0.111
+FlagEmbedding>=1.2
+uvicorn
