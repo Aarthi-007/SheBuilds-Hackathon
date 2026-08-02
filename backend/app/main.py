@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import init_db
+from app.database import close_db, init_db
 from app.api.router import api_router
 from app.ai.model_manager import model_manager
 
@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
     
     yield
     logger.info("Klyros Backend shutting down...")
+    await close_db()
 
 
 app = FastAPI(

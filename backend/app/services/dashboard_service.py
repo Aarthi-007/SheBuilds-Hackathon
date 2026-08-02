@@ -23,7 +23,7 @@ class DashboardService:
         if brand_ids:
             val_reports = await ValidationReport.find({"brand_id": {"$in": brand_ids}}).to_list()
         
-        avg_score = 94.5
+        avg_score = 0.0
         if val_reports:
             avg_score = round(sum(r.overall_score for r in val_reports) / len(val_reports), 1)
 
@@ -36,7 +36,7 @@ class DashboardService:
             {"title": "Total Brands", "value": total_brands, "change": "+2 this month", "icon": "brand"},
             {"title": "AI Campaigns", "value": total_campaigns, "change": "+18%", "icon": "campaign"},
             {"title": "Avg Certification Score", "value": f"{avg_score}%", "change": "+4.2%", "icon": "shield"},
-            {"title": "Active Market Trends", "value": len(trends) or 8, "change": "Real-time", "icon": "trending"}
+            {"title": "Active Market Trends", "value": len(trends), "change": "Real-time", "icon": "trending"}
         ]
 
         recent_activities = []
@@ -82,12 +82,7 @@ class DashboardService:
             })
         
         if not trend_series:
-            trend_series = [
-                {"name": "Week 1", "relevance": 88, "industry": 82},
-                {"name": "Week 2", "relevance": 92, "industry": 85},
-                {"name": "Week 3", "relevance": 90, "industry": 87},
-                {"name": "Week 4", "relevance": 94, "industry": 88}
-            ]
+            trend_series = []
 
         return {
             "total_brands": total_brands,

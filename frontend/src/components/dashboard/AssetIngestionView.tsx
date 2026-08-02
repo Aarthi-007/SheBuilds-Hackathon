@@ -506,36 +506,6 @@ export function AssetIngestionView({ brandId, onBrandCreated }: { brandId?: stri
                 </div>
               </div>
 
-              {/* Analytics & Post Analysis */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
-                    <TrendingUp className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase">Avg Engagement</p>
-                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.avg_engagement ?? "N/A"}</p>
-                  </div>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                    <Eye className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase">Monthly Reach</p>
-                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.monthly_reach ?? "N/A"}</p>
-                  </div>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center text-purple-600">
-                    <Share2 className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase">Post Validation</p>
-                    <p className="text-2xl font-black text-slate-800">{brandIdentity?.metrics?.post_validation ?? "N/A"}</p>
-                  </div>
-                </div>
-              </div>
 
               {/* Portfolio Grid (What we have done) */}
               <div>

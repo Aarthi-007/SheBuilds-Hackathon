@@ -37,9 +37,19 @@ async def save_uploaded_file_async(brand_id: str, file: UploadFile, category: st
     file_path = os.path.join(brand_storage, unique_filename)
 
     # 3. Async stream file writing to disk
-    contents = await file.read()
-    with open(file_path, "wb") as buffer:
-        buffer.write(contents)
+    try:
+        import aiofiles
+    except ImportError:
+        contents = await file.read()
+        with open(file_path, "wb") as buffer:
+            buffer.write(contents)
+    else:
+        async with aiofiles.open(file_path, "wb") as buffer:
+            while True:
+                chunk = await file.read(1024 * 64)
+                if not chunk:
+                    break
+                await buffer.write(chunk)
 
     file_size = os.path.getsize(file_path)
     relative_path = f"/storage/brands/{brand_id}/{category}/{unique_filename}"

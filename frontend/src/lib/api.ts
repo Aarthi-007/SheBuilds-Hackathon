@@ -5,7 +5,12 @@ export function getAuthHeaders(): Record<string, string> {
     return {};
   }
 
-  const token = localStorage.getItem("access_token") || localStorage.getItem("token");
+  let token = localStorage.getItem("access_token") || localStorage.getItem("token");
+  if (!token && process.env.NODE_ENV !== "production") {
+    token = "mock_token_for_development";
+    localStorage.setItem("access_token", token);
+  }
+
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

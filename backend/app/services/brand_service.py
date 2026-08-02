@@ -3,7 +3,8 @@ from fastapi import HTTPException, status, UploadFile
 from app.models.brand import Brand, BrandAsset
 from app.models.job import Job
 from app.schemas.brand import BrandCreateRequest, BrandUpdateRequest
-from app.utils.storage import save_uploaded_file
+from app.services.job_service import JobService
+from app.utils.storage import save_uploaded_file_async
 
 class BrandService:
     @staticmethod
@@ -64,11 +65,11 @@ class BrandService:
     @staticmethod
     async def upload_brand_assets(brand_id: str, org_id: str, files: List[UploadFile], category: str = "Advertisements") -> Tuple[List[BrandAsset], Job]:
         await BrandService.get_brand_by_id(brand_id, org_id)
-        
+
         uploaded_assets = []
         for file in files:
-            file_meta = save_uploaded_file(brand_id, file, category=category)
-            
+            file_meta = await save_uploaded_file_async(brand_id, file, category=category)
+
             asset_type = "document"
             if file_meta["mime_type"].startswith("image/"):
                 asset_type = "image"
@@ -78,7 +79,7 @@ class BrandService:
                 asset_type = "audio"
             elif file_meta["mime_type"] == "application/pdf":
                 asset_type = "pdf"
-                
+
             asset = BrandAsset(
                 brand_id=brand_id,
                 asset_name=file_meta["file_name"],
@@ -93,23 +94,8 @@ class BrandService:
             )
             await asset.insert()
             uploaded_assets.append(asset)
-            
-        job = Job(
-            brand_id=brand_id,
-            job_type="Identity",
-            status="completed",
-            progress=100,
-            current_stage="Asset Ingestion & Feature Store Synthesis Completed"
-        )
-        await job.insert()
 
-        # Dynamically evolve Living Brand Identity on asset upload
-        try:
-            from app.services.identity_service import IdentityService
-            await IdentityService.build_identity(brand_id, org_id, force_rebuild=True)
-        except Exception as e:
-            logger.error("Auto identity rebuild failed on asset upload: %s", e)
-        
+        job = await JobService.create_job(brand_id=brand_id, job_type="Identity")
         return uploaded_assets, job
 
     @staticmethod

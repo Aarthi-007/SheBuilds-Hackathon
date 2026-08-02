@@ -1,8 +1,9 @@
 from typing import List
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, BackgroundTasks
 from app.schemas.auth import StandardResponse
 from app.schemas.brand import BrandCreateRequest, BrandUpdateRequest, BrandDTO, BrandAssetDTO
 from app.services.brand_service import BrandService
+from app.services.job_service import JobService
 from app.api.deps import get_current_user
 from app.models.user import User
 
@@ -89,9 +90,18 @@ async def upload_brand_assets(
     brand_id: str,
     files: List[UploadFile] = File(...),
     category: str = Form("Advertisements"),
+    background_tasks: BackgroundTasks = None,
     current_user: User = Depends(get_current_user)
 ):
     assets, job = await BrandService.upload_brand_assets(brand_id, current_user.organization_id, files, category=category)
+    if background_tasks is not None:
+        background_tasks.add_task(
+            JobService.run_identity_job_worker,
+            str(job.id),
+            brand_id,
+            current_user.organization_id
+        )
+
     asset_dtos = [
         BrandAssetDTO(
             id=str(a.id),

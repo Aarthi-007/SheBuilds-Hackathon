@@ -2,13 +2,38 @@ import os
 import io
 import base64
 import json
-import requests
 import logging
 from typing import Dict, Any, List, Optional, Tuple
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from PIL import Image
 from app.config import settings
 
 logger = logging.getLogger("uvicorn")
+
+def create_retry_session(max_retries: int = 3, backoff_factor: float = 0.5) -> requests.Session:
+    session = requests.Session()
+    retry = Retry(
+        total=max_retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=(429, 502, 503, 504),
+        allowed_methods=frozenset(["HEAD", "GET", "OPTIONS", "POST"]),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+def post_with_retry(url: str, headers: Dict[str, str], payload: Dict[str, Any], timeout: float = 20.0) -> Optional[requests.Response]:
+    try:
+        with create_retry_session() as session:
+            return session.post(url, headers=headers, json=payload, timeout=timeout)
+    except requests.RequestException as exc:
+        logger.error("HTTP request failed for %s: %s", url, exc)
+        return None
 
 SINGLE_ASSET_SYSTEM_PROMPT = """# SYSTEM ROLE
 
@@ -357,13 +382,18 @@ class GroqBrandAnalyzer:
 
         try:
             url = f"{base_url.rstrip('/')}/chat/completions"
-            response = requests.post(url, headers=headers, json=payload, timeout=25)
-            if response.status_code == 200:
-                resp_json = response.json()
-                raw_text = resp_json["choices"][0]["message"]["content"]
-                return clean_json_response(raw_text)
-            else:
-                logger.error(f"{provider.upper()} transcript API error {response.status_code}: {response.text}")
+            response = post_with_retry(url, headers=headers, payload=payload, timeout=25.0)
+            if response is None:
+                logger.error("No response from %s provider for transcript analysis.", provider.upper())
+                return {}
+            if response.status_code != 200:
+                logger.error("%s transcript API error %s: %s", provider.upper(), response.status_code, response.text)
+                return {}
+            resp_json = response.json()
+            raw_text = resp_json["choices"][0]["message"]["content"]
+            return clean_json_response(raw_text)
+        except ValueError as exc:
+            logger.error("Failed to decode transcript API response: %s", exc)
         except Exception as e:
             logger.error(f"Failed to analyze transcript with {provider.upper()}: {e}")
 
@@ -404,13 +434,18 @@ class GroqBrandAnalyzer:
 
         try:
             url = f"{base_url.rstrip('/')}/chat/completions"
-            response = requests.post(url, headers=headers, json=payload, timeout=20)
-            if response.status_code == 200:
-                resp_json = response.json()
-                raw_text = resp_json["choices"][0]["message"]["content"]
-                return clean_json_response(raw_text)
-            else:
-                logger.error(f"{provider.upper()} API error {response.status_code}: {response.text}")
+            response = post_with_retry(url, headers=headers, payload=payload, timeout=20.0)
+            if response is None:
+                logger.error("No response from %s provider for asset analysis.", provider.upper())
+                return {}
+            if response.status_code != 200:
+                logger.error("%s API error %s: %s", provider.upper(), response.status_code, response.text)
+                return {}
+            resp_json = response.json()
+            raw_text = resp_json["choices"][0]["message"]["content"]
+            return clean_json_response(raw_text)
+        except ValueError as exc:
+            logger.error("Failed to decode asset analysis response: %s", exc)
         except Exception as e:
             logger.error(f"Failed to analyze asset with {provider.upper()}: {e}")
 
@@ -442,13 +477,18 @@ class GroqBrandAnalyzer:
 
         try:
             url = f"{base_url.rstrip('/')}/chat/completions"
-            response = requests.post(url, headers=headers, json=payload, timeout=25)
-            if response.status_code == 200:
-                resp_json = response.json()
-                raw_text = resp_json["choices"][0]["message"]["content"]
-                return clean_json_response(raw_text)
-            else:
-                logger.error(f"{provider.upper()} Aggregator API error {response.status_code}: {response.text}")
+            response = post_with_retry(url, headers=headers, payload=payload, timeout=25.0)
+            if response is None:
+                logger.error("No response from %s provider for identity aggregation.", provider.upper())
+                return {}
+            if response.status_code != 200:
+                logger.error("%s Aggregator API error %s: %s", provider.upper(), response.status_code, response.text)
+                return {}
+            resp_json = response.json()
+            raw_text = resp_json["choices"][0]["message"]["content"]
+            return clean_json_response(raw_text)
+        except ValueError as exc:
+            logger.error("Failed to decode aggregator response: %s", exc)
         except Exception as e:
             logger.error(f"Failed to aggregate identity with {provider.upper()}: {e}")
 

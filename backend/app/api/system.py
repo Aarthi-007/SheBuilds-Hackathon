@@ -1,5 +1,10 @@
-from fastapi import APIRouter
+import logging
+from fastapi import APIRouter, HTTPException
 from app.ai.model_manager import model_manager
+from app.config import settings
+from app.database import get_client
+
+logger = logging.getLogger("uvicorn")
 
 router = APIRouter(prefix="/system", tags=["System"])
 
@@ -21,3 +26,20 @@ async def get_model_status():
         "device": status.get("device", "cpu"),
         "ffmpeg": status.get("ffmpeg", False)
     }
+
+@router.get("/database")
+async def get_database_status():
+    client = get_client()
+    try:
+        if hasattr(client, "admin") and hasattr(client.admin, "command"):
+            await client.admin.command("ping")
+        server_name = getattr(client, "address", None) or "unknown"
+        return {
+            "status": "ok",
+            "database": "connected",
+            "service": settings.PROJECT_NAME,
+            "host": str(server_name)
+        }
+    except Exception as exc:
+        logger.error("Database health check failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="Database connection unavailable")

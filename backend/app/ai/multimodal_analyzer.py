@@ -163,17 +163,18 @@ Compare the target campaign content against the Brand Identity Model across 6 pi
 
 CRITICAL: Evaluate the actual original copy and calculate realistic scores based on the Brand Identity Model. Do not output the placeholder scores from the example below.
 
-Return ONLY valid JSON matching this schema:
+Return ONLY a valid JSON object matching this schema. Do not include comments or markdown.
+JSON Schema:
 {
-    "overall_score": 92.5, // Calculate dynamic overall score (0 to 100)
-    "status": "approved", // or "needs_review"
+    "overall_score": 90.0,
+    "status": "approved",
     "scores": {
-        "identity": 90, // Calculate dynamic score (0 to 100)
-        "visual": 95, // Calculate dynamic score (0 to 100)
-        "compliance": 100, // Calculate dynamic score (0 to 100)
-        "copyright": 90, // Calculate dynamic score (0 to 100)
-        "safety": 100, // Calculate dynamic score (0 to 100)
-        "context": 92 // Calculate dynamic score (0 to 100)
+        "identity": 90.0,
+        "visual": 90.0,
+        "compliance": 90.0,
+        "copyright": 90.0,
+        "safety": 90.0,
+        "context": 90.0
     },
     "issues": [
         {"category": "Brand Voice", "severity": "Low", "message": "Content tone is missing core brand keywords.", "solution": "Integrate brand voice keywords."}
@@ -214,19 +215,20 @@ CRITICAL: Rewrite the actual input text content creatively so that it matches th
 Do not output generic placeholder text like "Optimized copy..." or "Empowering innovation" unless it is a genuinely tailored adaptation of the input text content.
 Calculate dynamic scores and improvements. Do not return the exact example scores below.
 
-Return ONLY valid JSON matching this schema:
+Return ONLY a valid JSON object matching this schema. Do not include comments or markdown.
+JSON Schema:
 {
-    "optimized_text": "Optimized copy based on the original content and brand model",
-    "validation_score_before": 78.0, // Should match the current_validation.overall_score
-    "validation_score_after": 96.5, // Calculate dynamic score after optimization
-    "overall_improvement": 18.5, // Calculate validation_score_after - validation_score_before
+    "optimized_text": "YOUR_DYNAMICALLY_OPTIMIZED_TEXT",
+    "validation_score_before": 70.0,
+    "validation_score_after": 90.0,
+    "overall_improvement": 20.0,
     "changes": [
         {"field": "Brand Voice", "before": "Original text content...", "after": "Optimized text content...", "reason": "Enhanced emotional trust."}
     ],
     "multi_versions": [
-        {"name": "Version A (Maximum Brand Consistency)", "text": "Copy variation A...", "score": 98.5},
-        {"name": "Version B (Maximum Social Engagement)", "text": "Copy variation B...", "score": 96.0},
-        {"name": "Version C (Creative Showcase)", "text": "Copy variation C...", "score": 94.0}
+        {"name": "Version A (Maximum Brand Consistency)", "text": "Copy variation A...", "score": 90.0},
+        {"name": "Version B (Maximum Social Engagement)", "text": "Copy variation B...", "score": 88.0},
+        {"name": "Version C (Creative Showcase)", "text": "Copy variation C...", "score": 85.0}
     ]
 }
 
