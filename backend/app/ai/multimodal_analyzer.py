@@ -161,17 +161,19 @@ Compare the target campaign content against the Brand Identity Model across 6 pi
 5. Safety (Is the content brand-safe, free from toxic/harmful language?)
 6. Context (Is the copy optimized for the target platform?)
 
+CRITICAL: Evaluate the actual original copy and calculate realistic scores based on the Brand Identity Model. Do not output the placeholder scores from the example below.
+
 Return ONLY valid JSON matching this schema:
 {
-    "overall_score": 92.5,
+    "overall_score": 92.5, // Calculate dynamic overall score (0 to 100)
     "status": "approved", // or "needs_review"
     "scores": {
-        "identity": 90,
-        "visual": 95,
-        "compliance": 100,
-        "copyright": 90,
-        "safety": 100,
-        "context": 92
+        "identity": 90, // Calculate dynamic score (0 to 100)
+        "visual": 95, // Calculate dynamic score (0 to 100)
+        "compliance": 100, // Calculate dynamic score (0 to 100)
+        "copyright": 90, // Calculate dynamic score (0 to 100)
+        "safety": 100, // Calculate dynamic score (0 to 100)
+        "context": 92 // Calculate dynamic score (0 to 100)
     },
     "issues": [
         {"category": "Brand Voice", "severity": "Low", "message": "Content tone is missing core brand keywords.", "solution": "Integrate brand voice keywords."}
@@ -208,14 +210,18 @@ Platform: {platform}
         system_prompt = """You are KLYROS Content Optimization Engine.
 Optimize the campaign content to align fully with the Brand Identity Model.
 
+CRITICAL: Rewrite the actual input text content creatively so that it matches the voice/visual cues/keywords of the brand.
+Do not output generic placeholder text like "Optimized copy..." or "Empowering innovation" unless it is a genuinely tailored adaptation of the input text content.
+Calculate dynamic scores and improvements. Do not return the exact example scores below.
+
 Return ONLY valid JSON matching this schema:
 {
-    "optimized_text": "Optimized copy...",
-    "validation_score_before": 78.0,
-    "validation_score_after": 96.5,
-    "overall_improvement": 18.5,
+    "optimized_text": "Optimized copy based on the original content and brand model",
+    "validation_score_before": 78.0, // Should match the current_validation.overall_score
+    "validation_score_after": 96.5, // Calculate dynamic score after optimization
+    "overall_improvement": 18.5, // Calculate validation_score_after - validation_score_before
     "changes": [
-        {"field": "Brand Voice", "before": "Original text...", "after": "Optimized text...", "reason": "Enhanced emotional trust."}
+        {"field": "Brand Voice", "before": "Original text content...", "after": "Optimized text content...", "reason": "Enhanced emotional trust."}
     ],
     "multi_versions": [
         {"name": "Version A (Maximum Brand Consistency)", "text": "Copy variation A...", "score": 98.5},
